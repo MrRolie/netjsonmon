@@ -10,6 +10,8 @@ import { CaptureStore } from './store.js';
 import { runFlow } from './flowRunner.js';
 import { redactHeaders, redactUrl, redactError } from './redact.js';
 import { handleInterstitial } from './interstitial.js';
+import { normalizeUrl, endpointKey } from './normalize.js';
+import { extractFeatures } from './features.js';
 
 const XHR_FETCH_TYPES = new Set(['xhr', 'fetch']);
 const JSON_CONTENT_TYPES = new Set([
@@ -46,8 +48,12 @@ export async function monitor(options: MonitorOptions): Promise<void> {
   let browser: Browser | undefined;
   let context: BrowserContext | undefined;
   let captureCount = 0;
+  let duplicateCount = 0;
   const includePattern = options.includeRegex ? new RegExp(options.includeRegex) : null;
   const excludePattern = options.excludeRegex ? new RegExp(options.excludeRegex) : null;
+  
+  // Deduplication set: tracks (endpointKey|status|bodyHash) tuples
+  const seenCaptures = new Set<string>();
 
   try {
     // Launch browser
@@ -75,8 +81,12 @@ export async function monitor(options: MonitorOptions): Promise<void> {
     // Set up response handler
     page.on('response', async (response: Response) => {
       try {
-        await handleResponse(response, options, store, includePattern, excludePattern, captureCount);
-        captureCount++;
+        const result = await handleResponse(response, options, store, includePattern, excludePattern, captureCount, seenCaptures);
+        if (result === 'captured') {
+          captureCount++;
+        } else if (result === 'duplicate') {
+          duplicateCount++;
+        }
       } catch (error) {
         console.error('Error handling response:', error);
       }
@@ -140,7 +150,7 @@ export async function monitor(options: MonitorOptions): Promise<void> {
     console.log(`Monitoring for ${options.monitorMs}ms...`);
     await new Promise(resolve => setTimeout(resolve, options.monitorMs));
 
-    console.log(`Captured ${captureCount} responses`);
+    console.log(`Captured ${captureCount} responses (${duplicateCount} duplicates skipped)`);
   } finally {
     await context?.close();
     await browser?.close();
@@ -149,6 +159,7 @@ export async function monitor(options: MonitorOptions): Promise<void> {
 
 /**
  * Handle individual response
+ * @returns 'captured', 'duplicate', or 'skipped'
  */
 async function handleResponse(
   response: Response,
@@ -156,11 +167,12 @@ async function handleResponse(
   store: CaptureStore,
   includePattern: RegExp | null,
   excludePattern: RegExp | null,
-  captureCount: number
-): Promise<void> {
+  captureCount: number,
+  seenCaptures: Set<string>
+): Promise<'captured' | 'duplicate' | 'skipped'> {
   // Check capture limit
   if (options.maxCaptures > 0 && captureCount >= options.maxCaptures) {
-    return;
+    return 'skipped';
   }
 
   const url = response.url();
@@ -170,10 +182,10 @@ async function handleResponse(
 
   // Apply URL filters
   if (includePattern && !includePattern.test(url)) {
-    return;
+    return 'skipped';
   }
   if (excludePattern && excludePattern.test(url)) {
-    return;
+    return 'skipped';
   }
 
   // Get headers
@@ -198,18 +210,18 @@ async function handleResponse(
   }
 
   if (!shouldCapture) {
-    return;
+    return 'skipped';
   }
 
   // Filter by status (only success responses)
   if (status < 200 || status >= 400) {
-    return;
+    return 'skipped';
   }
 
   // Skip parsing for empty-body status codes
   if (status === 204 || status === 304) {
     await storeMetadataOnly(response, store, 'emptyBody');
-    return;
+    return 'captured';
   }
 
   // Early gate by content-length hint (if present)
@@ -217,7 +229,7 @@ async function handleResponse(
     const size = parseInt(contentLength, 10);
     if (!isNaN(size) && size > options.maxBodyBytes) {
       await storeMetadataOnly(response, store, 'maxBodyBytes');
-      return;
+      return 'captured';
     }
   }
 
@@ -228,6 +240,7 @@ async function handleResponse(
   let omittedReason: CaptureRecord['omittedReason'] | undefined;
   let bodyAvailable = false;
   let truncated = false;
+  let parsedBody: any = undefined;
 
   try {
     bodyBuffer = await response.body();
@@ -242,7 +255,7 @@ async function handleResponse(
       // Attempt JSON parse
       try {
         const text = bodyBuffer.toString('utf-8');
-        JSON.parse(text);
+        parsedBody = JSON.parse(text);
         jsonParseSuccess = true;
       } catch (error) {
         parseError = redactError(error as Error);
@@ -262,6 +275,42 @@ async function handleResponse(
     parseError = redactError(error as Error);
   }
 
+  // Compute normalization and features (only for successful JSON parse)
+  let normalizedUrl_: string | undefined;
+  let normalizedPath: string | undefined;
+  let endpointKey_: string | undefined;
+  let features: CaptureRecord['features'] | undefined;
+
+  if (jsonParseSuccess && parsedBody !== undefined) {
+    try {
+      // Normalize URL (apply to redacted URL)
+      const redactedUrl = redactUrl(url);
+      const normalized = normalizeUrl(redactedUrl);
+      normalizedUrl_ = normalized.normalizedUrl;
+      normalizedPath = normalized.normalizedPath;
+      endpointKey_ = endpointKey(request.method(), normalizedPath);
+
+      // Extract features
+      features = extractFeatures(parsedBody);
+    } catch (error) {
+      // If normalization/feature extraction fails, proceed without them
+      console.warn(`Feature extraction failed for ${url}:`, error);
+    }
+  }
+
+  // Check for duplicates using (endpointKey|status|bodyHash)
+  // We need to compute bodyHash first
+  const bodyHashPreview = bodyBuffer ? store.computeHash(bodyBuffer) : '';
+  const dedupeKey = `${endpointKey_ || url}|${status}|${bodyHashPreview}`;
+  
+  if (seenCaptures.has(dedupeKey)) {
+    // Duplicate detected, skip saving
+    return 'duplicate';
+  }
+  
+  // Mark as seen
+  seenCaptures.add(dedupeKey);
+
   // Build capture record
   const record: Omit<CaptureRecord, 'bodyHash' | 'bodyPath' | 'inlineBody'> = {
     timestamp: new Date().toISOString(),
@@ -277,9 +326,14 @@ async function handleResponse(
     omittedReason,
     jsonParseSuccess,
     parseError,
+    normalizedUrl: normalizedUrl_,
+    normalizedPath,
+    endpointKey: endpointKey_,
+    features,
   };
 
   await store.storeCapture(record, bodyBuffer);
+  return 'captured';
 }
 
 /**

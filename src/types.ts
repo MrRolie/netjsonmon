@@ -2,6 +2,8 @@
  * Core types for netjsonmon
  */
 
+import type { Features } from './features.js';
+
 export interface MonitorOptions {
   url: string;
   headless: boolean;
@@ -39,6 +41,14 @@ export interface CaptureRecord {
   bodyHash: string;
   jsonParseSuccess: boolean;
   parseError?: string;
+  
+  // Normalization fields (Prompt 4)
+  normalizedUrl?: string;      // URL with fragments stripped, params sorted, IDs replaced
+  normalizedPath?: string;      // Path portion with IDs replaced (e.g., /api/v1/users/:id)
+  endpointKey?: string;         // Stable endpoint identifier: "METHOD normalizedPath"
+  
+  // Feature extraction (Prompt 4)
+  features?: Features;          // Shallow, bounded JSON structure features
 }
 
 export type OmittedReason =
