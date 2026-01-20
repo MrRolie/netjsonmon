@@ -2,60 +2,52 @@
 
 A CLI tool to monitor and capture JSON network responses during browser sessions using Playwright.
 
-## Features
+![netjsonmon welcome banner](docs/assets/welcome-banner.png)
 
-- **Deterministic capture window**: Navigate to a URL, wait for network idle, optionally run a custom flow, and capture responses for a fixed duration
-- **Smart JSON detection**: Captures XHR/fetch by default, with overrides for JSON content-type headers
-- **Safe storage**: Hybrid body storage (inline ≤16KB, externalized ≤1MB), with redaction of sensitive headers, URLs, and JSON keys
-- **Configurable limits**: Control body sizes, capture counts, timeouts, and filtering
-- **Performance controls**: Concurrency limiting prevents memory/CPU overload during high-volume captures
-- **Progress tracking**: Real-time logging of capture progress, duplicates, and queued operations
-- **Endpoint intelligence**: Automatic aggregation and scoring surfaces likely data endpoints
-- **Debug artifacts**: Optional HAR recording and Playwright traces for replay and debugging
+## Quick Start
 
-## Project Status
-
-- **Main plan completed**: Prompts 1-11 in `docs/PLAN.md` are implemented, including CLI commands, capture pipeline, storage, scoring, and validation runs.
-- **Validation results**: See `docs/VALIDATION_RESULTS.md` for real-world test coverage and known issues.
-- **Extensions not yet implemented**: Prompts 12-14 (labeling, ML classifier, online prediction) are tracked in `docs/EXTENSIONS.md`.
-
-## Installation
+If you need help installing Node.js and npm, see `docs/SETUP.md`.
 
 ```bash
 npm install
 npm run build
 npm link
-```
 
-## Usage
-
-Quick start:
-
-```bash
 netjsonmon
+netjsonmon run https://example.com
 ```
 
-Basic usage:
+Captures are saved under `./captures/<timestamp>-<runId>/`.
+
+## Basic Usage
 
 ```bash
 netjsonmon run https://jsonplaceholder.typicode.com/users
 ```
 
-With options:
+Common options:
 
 ```bash
-netjsonmon run https://jsonplaceholder.typicode.com/users \
-  --monitorMs 15000 \
-  --timeoutMs 60000 \
-  --outDir ./my-captures \
-  --includeRegex "api\.example\.com" \
-  --maxBodyBytes 2097152 \
-  --captureAllJson \
-  --autoConsent yahoo \
-  --saveHar
+netjsonmon run https://jsonplaceholder.typicode.com/users --monitorMs 5000 --outDir ./captures
 ```
 
-### Options
+## What You Get
+
+- Deterministic capture window with JSON-only filtering.
+- Safe storage with redaction of common secrets and PII.
+- Endpoint summary and scoring to highlight likely data APIs.
+
+## Advanced Usage
+
+### Commands
+
+- `netjsonmon` shows the welcome banner and examples.
+- `netjsonmon run <url>` captures JSON responses.
+- `netjsonmon init` creates a config file and sample flow.
+- `netjsonmon inspect <captureDir>` shows a summary for a previous run.
+- `netjsonmon endpoints <captureDir>` filters and exports endpoints.
+
+### Run Options
 
 - `<url>` - URL to monitor (required)
 - `--headless` - Run browser in headless mode (default: true)
@@ -73,52 +65,37 @@ netjsonmon run https://jsonplaceholder.typicode.com/users \
 - `--saveHar` - Save HAR file for debugging (default: false)
 - `--trace` - Save Playwright trace for debugging (default: false)
 - `--userAgent <string>` - Custom user agent
-- `--autoConsent <mode>` - Auto-handle consent pages: `yahoo`, `generic`, or `false` (default: false)
+- `--consentMode <mode>` - Consent handling: auto, off, yahoo, generic (default: off)
+- `--consentAction <action>` - Consent action preference: reject or accept (default: reject)
+- `--consentHandlers <list>` - Comma-separated handlers to enable (default: all)
 - `--storageState <path>` - Load browser storage state (cookies, localStorage) from file
 - `--saveStorageState` - Save browser storage state after flow (default: false)
 - `--disableSummary` - Disable automatic summary generation (default: false)
+- `--quiet` - Suppress non-essential output (default: false)
+- `--verbose` - Show verbose progress information (default: false)
+- `--debug` - Show debug information (default: false)
+- `--json` - Output results as JSON (default: false)
+- `--open` - Open capture directory after completion (default: false)
 
-## Handling Consent Pages
+### Handling Consent Pages
 
 Many sites show privacy/consent interstitials before the main content. netjsonmon provides several ways to handle these:
 
-### Option 1: Auto-consent (Recommended for Yahoo sites)
-
-Use `--autoConsent` to automatically dismiss consent pages:
-
 ```bash
 # Auto-handle Yahoo consent (clicks "Reject all")
-npm run dev -- https://ca.finance.yahoo.com/quote/AAPL --autoConsent yahoo
+netjsonmon run https://ca.finance.yahoo.com/quote/AAPL --consentMode yahoo
 
 # Use generic consent handler for other sites
-npm run dev -- https://jsonplaceholder.typicode.com/users --autoConsent generic
+netjsonmon run https://example.com --consentMode generic
 ```
 
-**Default action:** Rejects consent (clicks "Reject all" / "Decline") for better repeatability. Falls back to accepting if reject button not found.
-
-### Option 2: Custom Flow
-
-Create a flow specifically for your site's consent UI:
+Default action is `reject` for better repeatability. You can override with:
 
 ```bash
-npm run dev -- https://ca.finance.yahoo.com/quote/AAPL --flow ./examples/flows/yahooConsent.ts
+netjsonmon run https://example.com --consentMode generic --consentAction accept
 ```
 
-### Option 3: Storage State (For Persistent Sessions)
-
-Save your consent choice once and reuse it:
-
-```bash
-# First run: handle consent and save state
-npm run dev -- https://jsonplaceholder.typicode.com/users --autoConsent yahoo --saveStorageState
-
-# Subsequent runs: load saved state (skips consent)
-npm run dev -- https://jsonplaceholder.typicode.com/users --storageState ./captures/<runId>/storageState.json
-```
-
-**Security note:** Storage state files contain cookies and may include session tokens. Keep them secure and don't commit to version control.
-
-## Custom Flows
+### Custom Flows
 
 Create a custom flow to interact with the page:
 
@@ -136,59 +113,30 @@ export default async (page) => {
 Run with:
 
 ```bash
-netjsonmon run https://jsonplaceholder.typicode.com/users --flow ./flows/login.ts
+netjsonmon run https://example.com --flow ./flows/login.ts
 ```
 
-## Debug Artifacts
+### Debug Artifacts
 
-### Playwright Trace
-
-Enable trace recording to debug navigation issues, timing problems, or unexpected behavior:
+Enable trace recording:
 
 ```bash
-netjsonmon run https://jsonplaceholder.typicode.com/users --trace
+netjsonmon run https://example.com --trace
 ```
 
-The trace captures:
-
-- Screenshots at every action
-- DOM snapshots
-- Network activity
-- Console logs
-- Timeline of all operations
-
-**View the trace:**
+View the trace:
 
 ```bash
 npx playwright show-trace ./captures/<runId>/trace.zip
 ```
 
-This opens an interactive viewer in your browser with:
-
-- Timeline scrubber
-- Network waterfall
-- Action log with screenshots
-- Console output
-- Source code view
-
-**Note:** Trace files can be large (5-50MB depending on activity). Use selectively for debugging specific issues.
-
-### HAR Files
-
-Enable HAR recording for network-level debugging:
+Enable HAR recording:
 
 ```bash
-netjsonmon run https://jsonplaceholder.typicode.com/users --saveHar
+netjsonmon run https://example.com --saveHar
 ```
 
-HAR files are useful for:
-
-- Analyzing request/response timing
-- Debugging CORS issues
-- Replaying sessions
-- Importing into tools like Chrome DevTools or Fiddler
-
-## Output Structure
+### Output Structure
 
 ```text
 captures/
@@ -203,41 +151,12 @@ captures/
     trace.zip          # Optional Playwright trace (--trace)
 ```
 
-### Capture Record Schema
-
-Each line in `index.jsonl` contains:
-
-```json
-{
-  "timestamp": "2026-01-19T23:00:00.000Z",
-  "url": "https://api.example.com/data",
-  "status": 200,
-  "method": "GET",
-  "requestHeaders": { "accept": "application/json" },
-  "responseHeaders": { "content-type": "application/json" },
-  "contentType": "application/json",
-  "payloadSize": 1024,
-  "bodyAvailable": true,
-  "truncated": false,
-  "bodyHash": "abc123...",
-  "jsonParseSuccess": true,
-  "inlineBody": { "id": 123 }
-}
-```
-
 ## Development
 
 ```bash
-# Build
 npm run build
-
-# Run tests
 npm test
-
-# Link CLI for local use
 npm link
-
-# Run built version
 netjsonmon run <url>
 ```
 
@@ -247,17 +166,12 @@ netjsonmon run <url>
 npm test
 ```
 
-Tests cover:
+## Project Status
 
-- Redaction of sensitive headers, URLs, and JSON keys
-- Hybrid storage (inline vs externalized bodies)
-- Hash computation for deduplication
-- Error handling for unavailable bodies
-- URL normalization and endpoint key generation
-- Feature extraction from JSON responses
-- Endpoint aggregation and heuristic scoring
-- Concurrency limiting and backpressure control
+- **Main plan completed**: Prompts 1-11 in `docs/PLAN.md` are implemented, including CLI commands, capture pipeline, storage, scoring, and validation runs.
+- **Validation results**: See `docs/VALIDATION_RESULTS.md` for real-world test coverage and known issues.
+- **Extensions not yet implemented**: Prompts 12-14 (labeling, ML classifier, online prediction) are tracked in `docs/EXTENSIONS.md`.
 
 ## License
 
-ISC
+MIT
