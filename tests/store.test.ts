@@ -1,15 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdir, rm, readFile } from 'fs/promises';
 import { join } from 'path';
+import { randomBytes } from 'crypto';
 import { CaptureStore } from '../src/store.js';
 import type { CaptureRecord } from '../src/types.js';
 
 describe('CaptureStore', () => {
-  const testDir = join(process.cwd(), 'test-captures');
-  const runId = 'test-run-123';
+  let testDir: string;
+  let runId: string;
   let store: CaptureStore;
 
   beforeEach(async () => {
+    // Create unique test directory per test
+    testDir = join(process.cwd(), 'test-captures', `store-test-${randomBytes(4).toString('hex')}`);
+    runId = 'test-run-123';
     await mkdir(testDir, { recursive: true });
     store = new CaptureStore(testDir, runId, 16384);
     await store.init();

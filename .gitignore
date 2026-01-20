@@ -78,3 +78,8 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# =========================
+# Development docs
+# =========================
+docs/archive/

@@ -5,13 +5,19 @@
 import { chromium, type Browser, type BrowserContext, type Page, type Response } from 'playwright';
 import { randomBytes } from 'crypto';
 import { resolve } from 'path';
+import ora, { type Ora } from 'ora';
+import chalk from 'chalk';
 import type { MonitorOptions, CaptureRecord } from './types.js';
+import type { OutputMode } from './ui/render.js';
 import { CaptureStore } from './store.js';
 import { runFlow } from './flowRunner.js';
 import { redactHeaders, redactUrl, redactError } from './redact.js';
-import { handleInterstitial } from './interstitial.js';
+import { handleConsent } from './interstitial.js';
 import { normalizeUrl, endpointKey } from './normalize.js';
 import { extractFeatures } from './features.js';
+import { generateSummary } from './summary.js';
+import { ConcurrencyLimiter } from './queue.js';
+import { renderRunHeader } from './ui/render.js';
 
 const XHR_FETCH_TYPES = new Set(['xhr', 'fetch']);
 const JSON_CONTENT_TYPES = new Set([
@@ -33,17 +39,26 @@ function isJsonContentType(contentType: string | null): boolean {
 /**
  * Main monitor function
  */
-export async function monitor(options: MonitorOptions): Promise<void> {
+export async function monitor(options: MonitorOptions & { outputMode?: OutputMode }): Promise<{ captureDir: string } | void> {
+  const outputMode = options.outputMode || { json: false, quiet: false, verbose: false, debug: false };
   const runId = new Date().toISOString().replace(/[:.]/g, '-') + '-' + randomBytes(4).toString('hex');
+  const captureDir = resolve(options.outDir, runId);
   const store = new CaptureStore(options.outDir, runId, options.inlineBodyBytes);
   
   await store.init();
+  const startedAt = new Date().toISOString();
   await store.saveRunMetadata({
     runId,
-    startedAt: new Date().toISOString(),
+    startedAt,
     url: options.url,
     options,
   });
+
+  // Show run header if not quiet/json mode
+  if (!outputMode.quiet && !outputMode.json) {
+    console.log(renderRunHeader(options.url, startedAt, captureDir));
+    console.log();
+  }
 
   let browser: Browser | undefined;
   let context: BrowserContext | undefined;
@@ -54,10 +69,24 @@ export async function monitor(options: MonitorOptions): Promise<void> {
   
   // Deduplication set: tracks (endpointKey|status|bodyHash) tuples
   const seenCaptures = new Set<string>();
+  
+  // Concurrency limiter for capture operations
+  const limiter = new ConcurrencyLimiter(options.maxConcurrentCaptures);
+  
+  // Spinner for progress (disabled in json/quiet mode)
+  let spinner: Ora | null = null;
+  if (!outputMode.json && !outputMode.quiet) {
+    spinner = ora('Launching browser...').start();
+  }
+  
+  // Progress tracking
+  let lastProgressLog = Date.now();
+  const progressIntervalMs = 2000; // Update spinner every 2 seconds if active
 
   try {
     // Launch browser
     browser = await chromium.launch({ headless: options.headless });
+    spinner?.succeed('Browser launched');
     
     // Create context with optional HAR recording and storage state
     const contextOptions: any = {
@@ -78,21 +107,52 @@ export async function monitor(options: MonitorOptions): Promise<void> {
     context = await browser.newContext(contextOptions);
     const page = await context.newPage();
 
-    // Set up response handler
-    page.on('response', async (response: Response) => {
-      try {
-        const result = await handleResponse(response, options, store, includePattern, excludePattern, captureCount, seenCaptures);
-        if (result === 'captured') {
-          captureCount++;
-        } else if (result === 'duplicate') {
-          duplicateCount++;
+    // Start trace if requested
+    if (options.trace) {
+      spinner = outputMode.json || outputMode.quiet ? null : ora('Starting trace...').start();
+      await context.tracing.start({
+        screenshots: true,
+        snapshots: true,
+      });
+      spinner?.succeed('Trace started');
+    }
+
+    // Set up response handler with concurrency control
+    page.on('response', (response: Response) => {
+      // Enqueue response handling through limiter
+      limiter.run(async () => {
+        try {
+          const result = await handleResponse(response, options, store, includePattern, excludePattern, captureCount, seenCaptures);
+          if (result === 'captured') {
+            captureCount++;
+          } else if (result === 'duplicate') {
+            duplicateCount++;
+          }
+          
+          // Progress updates (throttled)
+          const now = Date.now();
+          if (now - lastProgressLog > progressIntervalMs) {
+            if (spinner && (limiter.getRunning() > 0 || limiter.getPending() > 0 || captureCount > 0)) {
+              spinner.text = `Capturing: ${chalk.green(captureCount.toString())} captured, ${chalk.yellow(duplicateCount.toString())} duplicates, ${limiter.getRunning()} processing, ${limiter.getPending()} queued`;
+            } else if (outputMode.verbose && !outputMode.json) {
+              console.log(`Progress: ${captureCount} captured, ${duplicateCount} duplicates, ${limiter.getRunning()} processing, ${limiter.getPending()} queued`);
+            }
+            lastProgressLog = now;
+          }
+        } catch (error) {
+          if (!outputMode.json) {
+            console.error('Error handling response:', error);
+          }
         }
-      } catch (error) {
-        console.error('Error handling response:', error);
-      }
+      }).catch(error => {
+        if (!outputMode.json) {
+          console.error('Limiter error:', error);
+        }
+      });
     });
 
     // Navigate with timeout
+    spinner = outputMode.json || outputMode.quiet ? null : ora('Navigating to URL...').start();
     const navigationPromise = page.goto(options.url, {
       waitUntil: 'domcontentloaded',
       timeout: options.timeoutMs,
@@ -104,13 +164,25 @@ export async function monitor(options: MonitorOptions): Promise<void> {
         setTimeout(() => reject(new Error('Navigation timeout')), options.timeoutMs)
       ),
     ]);
+    spinner?.succeed('Navigation complete');
 
     // Handle interstitial pages (consent, privacy, etc.)
-    if (options.autoConsent !== false) {
-      const handled = await handleInterstitial(page, options.autoConsent, options.timeoutMs);
+    if (options.consentMode !== 'off') {
+      spinner = outputMode.json || outputMode.quiet ? null : ora('Checking for interstitials...').start();
+      const handled = await handleConsent(
+        page,
+        options.consentMode,
+        options.consentAction,
+        options.timeoutMs,
+        options.consentHandlers
+      );
       if (handled) {
+        if (spinner) spinner.text = 'Handled interstitial, waiting for page...';
         // Wait for navigation to complete after dismissing interstitial
         await page.waitForLoadState('domcontentloaded', { timeout: options.timeoutMs });
+        spinner?.succeed('Interstitial handled');
+      } else {
+        spinner?.info('No interstitials detected');
       }
     }
 
@@ -121,39 +193,93 @@ export async function monitor(options: MonitorOptions): Promise<void> {
         (url) => new URL(url).hostname === targetHost,
         { timeout: options.timeoutMs }
       );
-      console.log(`✓ On target host: ${targetHost}`);
+      if (!outputMode.json && !outputMode.quiet) {
+        console.log(chalk.green('✓') + ` On target host: ${chalk.cyan(targetHost)}`);
+      }
     } catch {
-      console.warn(`⚠ Did not reach target host ${targetHost}, continuing anyway`);
+      if (!outputMode.json && !outputMode.quiet) {
+        console.log(chalk.yellow('⚠') + ` Did not reach target host ${targetHost}, continuing anyway`);
+      }
     }
 
     // Wait for network idle (bounded)
+    spinner = outputMode.json || outputMode.quiet ? null : ora('Waiting for network idle...').start();
     try {
       await page.waitForLoadState('networkidle', { timeout: 5000 });
+      spinner?.succeed('Network idle');
     } catch {
-      // Continue even if networkidle times out
+      spinner?.info('Network idle timeout (continuing)');
     }
 
     // Run optional flow
     if (options.flow) {
+      spinner = outputMode.json || outputMode.quiet ? null : ora('Running custom flow...').start();
       const flowPath = resolve(options.flow);
       await runFlow(page, flowPath, options.timeoutMs);
+      spinner?.succeed('Flow completed');
     }
 
     // Save storage state if requested
     if (options.saveStorageState && context) {
       const storageStatePath = resolve(options.outDir, runId, 'storageState.json');
       await context.storageState({ path: storageStatePath });
-      console.log(`✓ Saved storage state to ${storageStatePath}`);
+      if (!outputMode.json && !outputMode.quiet) {
+        console.log(chalk.green('✓') + ` Saved storage state`);
+      }
     }
 
     // Capture window
-    console.log(`Monitoring for ${options.monitorMs}ms...`);
+    spinner = outputMode.json || outputMode.quiet ? null : ora(`Monitoring network (${options.monitorMs}ms)...`).start();
     await new Promise(resolve => setTimeout(resolve, options.monitorMs));
+    spinner?.succeed('Monitoring complete');
 
-    console.log(`Captured ${captureCount} responses (${duplicateCount} duplicates skipped)`);
+    // Wait for all in-flight captures to complete
+    spinner = outputMode.json || outputMode.quiet ? null : ora('Finalizing captures...').start();
+    await limiter.drain();
+    spinner?.succeed(`Captured ${chalk.green(captureCount)} responses (${chalk.yellow(duplicateCount)} duplicates skipped)`);
+    
+    // Stop trace if enabled
+    if (options.trace && context) {
+      const tracePath = resolve(options.outDir, runId, 'trace.zip');
+      await context.tracing.stop({ path: tracePath });
+      if (!outputMode.json && !outputMode.quiet) {
+        const fs = await import('fs');
+        const stats = fs.statSync(tracePath);
+        const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+        console.log(chalk.green('✓') + ` Saved trace (${sizeMB} MB)`);
+      }
+    }
+    
+    // Close browser before summary generation (cleanup can take 1-2 seconds)
+    spinner = outputMode.json || outputMode.quiet ? null : ora('Closing browser...').start();
+    if (context) {
+      await context.close().catch(() => {});
+      context = undefined;
+    }
+    if (browser) {
+      await browser.close().catch(() => {});
+      browser = undefined;
+    }
+    spinner?.succeed('Browser closed');
+    
+    // Generate summary (unless disabled)
+    if (!options.disableSummary) {
+      spinner = outputMode.json || outputMode.quiet ? null : ora('Generating endpoint summary...').start();
+      const runDir = resolve(options.outDir, runId);
+      await generateSummary(runDir, outputMode);
+      spinner?.stop();
+    }
+    
+    return { captureDir };
   } finally {
-    await context?.close();
-    await browser?.close();
+    // Cleanup in case of early exit/error (should be no-op now)
+    spinner?.stop();
+    if (context) {
+      await context.close().catch(() => {});
+    }
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
   }
 }
 

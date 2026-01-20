@@ -15,14 +15,22 @@ export interface MonitorOptions {
   maxBodyBytes: number;
   inlineBodyBytes: number;
   maxCaptures: number;
+  maxConcurrentCaptures: number;
   captureAllJson: boolean;
   flow?: string;
   saveHar: boolean;
+  trace: boolean;
   userAgent?: string;
-  autoConsent: 'yahoo' | 'generic' | false;
+  consentMode: ConsentMode;
+  consentAction: ConsentAction;
+  consentHandlers?: string[];
   storageState?: string;
   saveStorageState: boolean;
+  disableSummary: boolean;
 }
+
+export type ConsentMode = 'auto' | 'off' | 'yahoo' | 'generic';
+export type ConsentAction = 'reject' | 'accept';
 
 export interface CaptureRecord {
   timestamp: string;
