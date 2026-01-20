@@ -1,0 +1,80 @@
+# =========================
+# Node / TypeScript
+# =========================
+node_modules/
+dist/
+build/
+.esbuild/
+.turbo/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# =========================
+# Playwright
+# =========================
+# Playwright browsers (if not using global cache)
+playwright/.cache/
+.playwright/
+
+# Traces / artifacts (generated per run)
+trace.zip
+**/trace.zip
+session.har
+**/session.har
+
+# =========================
+# netjsonmon outputs
+# =========================
+captures/
+!captures/.gitkeep
+test-captures/
+
+# Optional local DBs
+*.sqlite
+*.db
+
+# =========================
+# ML / Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Python build / tooling
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Trained models & datasets (generated)
+ml/models/
+ml/data/
+ml/runs/
+ml/*.pkl
+ml/*.joblib
+
+# =========================
+# OS / editor junk
+# =========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
