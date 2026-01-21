@@ -82,6 +82,13 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
   // Progress tracking
   let lastProgressLog = Date.now();
   const progressIntervalMs = 2000; // Update spinner every 2 seconds if active
+  const operationStartTime = Date.now(); // Track overall operation time
+  
+  // Create an AbortController for enforcing hard timeout
+  const abortController = new AbortController();
+  const timeoutHandle = setTimeout(() => {
+    abortController.abort(new Error(`Hard timeout exceeded (${options.timeoutMs}ms)`));
+  }, options.timeoutMs);
 
   try {
     // Launch browser
@@ -228,14 +235,36 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
       }
     }
 
-    // Capture window
+    // Capture window (respects hard timeout)
     spinner = outputMode.json || outputMode.quiet ? null : ora(`Monitoring network (${options.monitorMs}ms)...`).start();
-    await new Promise(resolve => setTimeout(resolve, options.monitorMs));
+    if (abortController.signal.aborted) {
+      throw abortController.signal.reason;
+    }
+    const monitorPromise = new Promise<void>(resolve => setTimeout(resolve, options.monitorMs));
+    await Promise.race([
+      monitorPromise,
+      new Promise<void>((_, reject) => {
+        abortController.signal.addEventListener('abort', () => {
+          reject(abortController.signal.reason);
+        });
+      })
+    ]);
     spinner?.succeed('Monitoring complete');
 
-    // Wait for all in-flight captures to complete
+    // Wait for all in-flight captures to complete (with timeout remaining)
     spinner = outputMode.json || outputMode.quiet ? null : ora('Finalizing captures...').start();
-    await limiter.drain();
+    if (abortController.signal.aborted) {
+      throw abortController.signal.reason;
+    }
+    // Drain will be interrupted by the main abort handler
+    await Promise.race([
+      limiter.drain(),
+      new Promise<void>((_, reject) => {
+        abortController.signal.addEventListener('abort', () => {
+          reject(abortController.signal.reason);
+        });
+      })
+    ]);
     spinner?.succeed(`Captured ${chalk.green(captureCount)} responses (${chalk.yellow(duplicateCount)} duplicates skipped)`);
     
     // Stop trace if enabled
@@ -272,6 +301,9 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     
     return { captureDir };
   } finally {
+    // Clear the hard timeout
+    clearTimeout(timeoutHandle);
+    
     // Cleanup in case of early exit/error (should be no-op now)
     spinner?.stop();
     if (context) {

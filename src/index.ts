@@ -39,7 +39,7 @@ program
   .option('--saveHar', 'Save HAR file for debugging', false)
   .option('--trace', 'Save Playwright trace for debugging', false)
   .option('--userAgent <string>', 'Custom user agent')
-  .option('--consentMode <mode>', 'Consent handling: auto, off, yahoo, generic', 'off')
+  .option('--consentMode <mode>', 'Consent handling: auto, off, yahoo, generic', 'auto')
   .option('--consentAction <action>', 'Consent action preference: reject or accept', 'reject')
   .option('--consentHandlers <list>', 'Comma-separated handlers to enable (default: all)', undefined)
   .option('--storageState <path>', 'Load browser storage state from file')

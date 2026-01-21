@@ -52,7 +52,7 @@ netjsonmon run https://jsonplaceholder.typicode.com/users --monitorMs 5000 --out
 - `<url>` - URL to monitor (required)
 - `--headless` - Run browser in headless mode (default: true)
 - `--monitorMs <ms>` - Capture window duration (default: 10000)
-- `--timeoutMs <ms>` - Overall timeout (default: 30000)
+- `--timeoutMs <ms>` - Hard timeout for entire operation, including capture finalization (default: 30000)
 - `--outDir <dir>` - Output directory (default: ./captures)
 - `--includeRegex <pattern>` - Only capture URLs matching this regex
 - `--excludeRegex <pattern>` - Exclude URLs matching this regex
@@ -65,7 +65,7 @@ netjsonmon run https://jsonplaceholder.typicode.com/users --monitorMs 5000 --out
 - `--saveHar` - Save HAR file for debugging (default: false)
 - `--trace` - Save Playwright trace for debugging (default: false)
 - `--userAgent <string>` - Custom user agent
-- `--consentMode <mode>` - Consent handling: auto, off, yahoo, generic (default: off)
+- `--consentMode <mode>` - Consent handling: auto, off, yahoo, generic (default: auto)
 - `--consentAction <action>` - Consent action preference: reject or accept (default: reject)
 - `--consentHandlers <list>` - Comma-separated handlers to enable (default: all)
 - `--storageState <path>` - Load browser storage state (cookies, localStorage) from file
