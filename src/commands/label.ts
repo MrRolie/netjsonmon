@@ -19,6 +19,7 @@ export interface LabelCommandOptions {
   includeLabeled?: boolean;
   export?: boolean;
   out?: string;
+  autoNonDataNoBody?: boolean;
 }
 
 interface EndpointRecord {
@@ -142,6 +143,25 @@ async function labelSingleRun(
   console.log(divider());
 
   const samples = await loadEndpointSamples(run.path, filtered.map(ep => ep.endpointKey));
+
+  if (options.autoNonDataNoBody) {
+    const autoCount = await autoLabelNoBody(filtered, labelsMap, samples, run.labelsPath);
+    if (autoCount > 0) {
+      console.log(chalk.gray(`Auto-labeled ${autoCount} endpoint(s) as non-data (no body).`));
+    }
+  }
+
+  if (!options.includeLabeled) {
+    filtered = filtered.filter(ep => !labelsMap.has(ep.endpointKey));
+  }
+
+  if (filtered.length === 0) {
+    console.log(chalk.yellow('No endpoints match the filters.'));
+    if (!options.includeLabeled && labelsMap.size > 0) {
+      console.log(chalk.gray('Use --includeLabeled to review or relabel existing entries.'));
+    }
+    return;
+  }
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
@@ -462,6 +482,37 @@ async function loadEndpointSamples(runDir: string, endpointKeys: string[]): Prom
 
   rl.close();
   return samples;
+}
+
+async function autoLabelNoBody(
+  endpoints: EndpointRecord[],
+  labelsMap: Map<string, LabelRecord>,
+  samples: Map<string, EndpointSample>,
+  labelsPath: string
+): Promise<number> {
+  let count = 0;
+  for (const endpoint of endpoints) {
+    if (labelsMap.has(endpoint.endpointKey)) {
+      continue;
+    }
+    const sample = samples.get(endpoint.endpointKey);
+    if (sample?.body !== undefined || sample?.bodyPath) {
+      continue;
+    }
+
+    const record: LabelRecord = {
+      endpointKey: endpoint.endpointKey,
+      label: 'non-data',
+      labeledAt: new Date().toISOString(),
+      source: 'manual',
+    };
+
+    await appendFile(labelsPath, JSON.stringify(record) + '\n', 'utf-8');
+    labelsMap.set(endpoint.endpointKey, record);
+    count++;
+  }
+
+  return count;
 }
 
 async function loadSampleBody(runDir: string, inlineBody?: any, bodyPath?: string): Promise<any | undefined> {

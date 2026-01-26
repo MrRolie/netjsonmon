@@ -131,6 +131,7 @@ program
   .option('--maxScore <score>', 'Maximum score threshold (0-1)')
   .option('--limit <count>', 'Limit number of endpoints to label')
   .option('--includeLabeled', 'Include endpoints that already have labels', false)
+  .option('--autoNonDataNoBody', 'Auto-label endpoints without bodies as non-data', false)
   .option('--export', 'Export training.jsonl from existing labels', false)
   .option('--out <filename>', 'Output filename for training export')
   .action(async (captureDir: string, options: any) => {

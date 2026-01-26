@@ -166,6 +166,9 @@ netjsonmon label ./captures/<runId>
 
 # Export training data (features + label)
 netjsonmon label ./captures/<runId> --export
+
+# Auto-label endpoints without bodies as non-data
+netjsonmon label ./captures/<runId> --autoNonDataNoBody
 ```
 
 ### Shared Training Captures
