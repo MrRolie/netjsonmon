@@ -36,6 +36,21 @@ function isJsonContentType(contentType: string | null): boolean {
   return Array.from(JSON_CONTENT_TYPES).some(type => lower.includes(type));
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(`${label} timeout (${timeoutMs}ms)`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  });
+}
+
 /**
  * Main monitor function
  */
@@ -73,11 +88,38 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
   // Concurrency limiter for capture operations
   const limiter = new ConcurrencyLimiter(options.maxConcurrentCaptures);
   
+  const stageLogEnabled = !outputMode.json && !outputMode.quiet && (outputMode.verbose || outputMode.debug || !process.stdout.isTTY);
+  const spinnerEnabled = !outputMode.json && !outputMode.quiet && !stageLogEnabled;
+  const logStage = (message: string): void => {
+    if (stageLogEnabled) {
+      console.log(message);
+    }
+  };
+  const startStage = (message: string): Ora | null => {
+    if (spinnerEnabled) {
+      return ora(message).start();
+    }
+    logStage(message);
+    return null;
+  };
+  const succeedStage = (spinner: Ora | null, message: string): void => {
+    if (spinner) {
+      spinner.succeed(message);
+    } else {
+      logStage(message);
+    }
+  };
+  const infoStage = (spinner: Ora | null, message: string): void => {
+    if (spinner) {
+      spinner.info(message);
+    } else {
+      logStage(message);
+    }
+  };
+
   // Spinner for progress (disabled in json/quiet mode)
   let spinner: Ora | null = null;
-  if (!outputMode.json && !outputMode.quiet) {
-    spinner = ora('Launching browser...').start();
-  }
+  spinner = startStage('Launching browser...');
   
   // Progress tracking
   let lastProgressLog = Date.now();
@@ -92,8 +134,8 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
 
   try {
     // Launch browser
-    browser = await chromium.launch({ headless: options.headless });
-    spinner?.succeed('Browser launched');
+    browser = await withTimeout(chromium.launch({ headless: options.headless }), options.timeoutMs, 'Browser launch');
+    succeedStage(spinner, 'Browser launched');
     
     // Create context with optional HAR recording and storage state
     const contextOptions: any = {
@@ -111,17 +153,17 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
       };
     }
 
-    context = await browser.newContext(contextOptions);
-    const page = await context.newPage();
+    context = await withTimeout(browser.newContext(contextOptions), options.timeoutMs, 'Browser context creation');
+    const page = await withTimeout(context.newPage(), options.timeoutMs, 'Page creation');
 
     // Start trace if requested
     if (options.trace) {
-      spinner = outputMode.json || outputMode.quiet ? null : ora('Starting trace...').start();
+      spinner = startStage('Starting trace...');
       await context.tracing.start({
         screenshots: true,
         snapshots: true,
       });
-      spinner?.succeed('Trace started');
+      succeedStage(spinner, 'Trace started');
     }
 
     // Set up response handler with concurrency control
@@ -159,7 +201,7 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     });
 
     // Navigate with timeout
-    spinner = outputMode.json || outputMode.quiet ? null : ora('Navigating to URL...').start();
+    spinner = startStage('Navigating to URL...');
     const navigationPromise = page.goto(options.url, {
       waitUntil: 'domcontentloaded',
       timeout: options.timeoutMs,
@@ -171,11 +213,11 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
         setTimeout(() => reject(new Error('Navigation timeout')), options.timeoutMs)
       ),
     ]);
-    spinner?.succeed('Navigation complete');
+    succeedStage(spinner, 'Navigation complete');
 
     // Handle interstitial pages (consent, privacy, etc.)
     if (options.consentMode !== 'off') {
-      spinner = outputMode.json || outputMode.quiet ? null : ora('Checking for interstitials...').start();
+      spinner = startStage('Checking for interstitials...');
       const handled = await handleConsent(
         page,
         options.consentMode,
@@ -187,9 +229,9 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
         if (spinner) spinner.text = 'Handled interstitial, waiting for page...';
         // Wait for navigation to complete after dismissing interstitial
         await page.waitForLoadState('domcontentloaded', { timeout: options.timeoutMs });
-        spinner?.succeed('Interstitial handled');
+        succeedStage(spinner, 'Interstitial handled');
       } else {
-        spinner?.info('No interstitials detected');
+        infoStage(spinner, 'No interstitials detected');
       }
     }
 
@@ -210,20 +252,20 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     }
 
     // Wait for network idle (bounded)
-    spinner = outputMode.json || outputMode.quiet ? null : ora('Waiting for network idle...').start();
+    spinner = startStage('Waiting for network idle...');
     try {
       await page.waitForLoadState('networkidle', { timeout: 5000 });
-      spinner?.succeed('Network idle');
+      succeedStage(spinner, 'Network idle');
     } catch {
-      spinner?.info('Network idle timeout (continuing)');
+      infoStage(spinner, 'Network idle timeout (continuing)');
     }
 
     // Run optional flow
     if (options.flow) {
-      spinner = outputMode.json || outputMode.quiet ? null : ora('Running custom flow...').start();
+      spinner = startStage('Running custom flow...');
       const flowPath = resolve(options.flow);
       await runFlow(page, flowPath, options.timeoutMs);
-      spinner?.succeed('Flow completed');
+      succeedStage(spinner, 'Flow completed');
     }
 
     // Save storage state if requested
@@ -236,7 +278,7 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     }
 
     // Capture window (respects hard timeout)
-    spinner = outputMode.json || outputMode.quiet ? null : ora(`Monitoring network (${options.monitorMs}ms)...`).start();
+    spinner = startStage(`Monitoring network (${options.monitorMs}ms)...`);
     if (abortController.signal.aborted) {
       throw abortController.signal.reason;
     }
@@ -249,10 +291,10 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
         });
       })
     ]);
-    spinner?.succeed('Monitoring complete');
+    succeedStage(spinner, 'Monitoring complete');
 
     // Wait for all in-flight captures to complete (with timeout remaining)
-    spinner = outputMode.json || outputMode.quiet ? null : ora('Finalizing captures...').start();
+    spinner = startStage('Finalizing captures...');
     if (abortController.signal.aborted) {
       throw abortController.signal.reason;
     }
@@ -265,7 +307,7 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
         });
       })
     ]);
-    spinner?.succeed(`Captured ${chalk.green(captureCount)} responses (${chalk.yellow(duplicateCount)} duplicates skipped)`);
+    succeedStage(spinner, `Captured ${chalk.green(captureCount)} responses (${chalk.yellow(duplicateCount)} duplicates skipped)`);
     
     // Stop trace if enabled
     if (options.trace && context) {
@@ -280,7 +322,7 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     }
     
     // Close browser before summary generation (cleanup can take 1-2 seconds)
-    spinner = outputMode.json || outputMode.quiet ? null : ora('Closing browser...').start();
+    spinner = startStage('Closing browser...');
     if (context) {
       await context.close().catch(() => {});
       context = undefined;
@@ -289,11 +331,11 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
       await browser.close().catch(() => {});
       browser = undefined;
     }
-    spinner?.succeed('Browser closed');
+    succeedStage(spinner, 'Browser closed');
     
     // Generate summary (unless disabled)
     if (!options.disableSummary) {
-      spinner = outputMode.json || outputMode.quiet ? null : ora('Generating endpoint summary...').start();
+      spinner = startStage('Generating endpoint summary...');
       const runDir = resolve(options.outDir, runId);
       await generateSummary(runDir, outputMode);
       spinner?.stop();

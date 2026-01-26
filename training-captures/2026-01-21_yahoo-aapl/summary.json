@@ -1,0 +1,699 @@
+{
+  "runId": "2026-01-21T20-44-49-876Z-90ef2f50",
+  "url": "https://ca.finance.yahoo.com/quote/AAPL/",
+  "startedAt": "2026-01-21T20:44:49.878Z",
+  "completedAt": "2026-01-21T20:45:11.153Z",
+  "captureDir": "/Users/Mikael/Documents/Coding Projects/netjsonmon/captures/2026-01-21T20-44-49-876Z-90ef2f50",
+  "totalResponses": 77,
+  "jsonCaptures": 77,
+  "duplicatesSkipped": 0,
+  "redactionsApplied": 0,
+  "truncatedBodies": 31,
+  "totalEndpoints": 51,
+  "scoringWeights": {
+    "frequency": 0.3,
+    "payloadSize": 0.3,
+    "structure": 0.2,
+    "stability": 0.2
+  },
+  "endpoints": [
+    {
+      "endpointKey": "POST /nimbus_ms/remote",
+      "method": "POST",
+      "normalizedPath": "/nimbus_ms/remote",
+      "score": 0.612,
+      "count": 1,
+      "avgSize": 25611,
+      "maxSize": 25611,
+      "schemaHashes": [
+        "de51f7cee7b45acb0167a4e465addce47af6fc4a326e384444a20546db7aaf1c"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "ca.finance.yahoo.com"
+      ],
+      "reasons": [
+        "large average payload (25.0KB)",
+        "has data-likeness flags (id/items/results/data)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "assets.blob",
+        "assets.css",
+        "assets.js",
+        "html",
+        "data.newCount",
+        "data.count"
+      ],
+      "firstSeen": "2026-01-21T20:44:52.663Z",
+      "lastSeen": "2026-01-21T20:44:52.663Z"
+    },
+    {
+      "endpointKey": "GET /",
+      "method": "GET",
+      "normalizedPath": "/",
+      "score": 0.612,
+      "count": 1,
+      "avgSize": 11325,
+      "maxSize": 11325,
+      "schemaHashes": [
+        "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "yfc-server-query.finance.yahoo.com"
+      ],
+      "reasons": [
+        "large average payload (11.1KB)",
+        "has data-likeness flags (id/items/results/data)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "data.my.discover",
+        "data.my.__typename"
+      ],
+      "firstSeen": "2026-01-21T20:44:55.022Z",
+      "lastSeen": "2026-01-21T20:44:55.022Z"
+    },
+    {
+      "endpointKey": "GET /ws/screeners/v1/finance/calendar-events",
+      "method": "GET",
+      "normalizedPath": "/ws/screeners/v1/finance/calendar-events",
+      "score": 0.535,
+      "count": 3,
+      "avgSize": 20221,
+      "maxSize": 51794,
+      "schemaHashes": [
+        "eab762a03fd979a04cc4706e6536d382bc89d2d1356afcd054a16b2235ecd471"
+      ],
+      "statusCounts": {
+        "200": 3
+      },
+      "statusDistribution": {
+        "200": 3
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "query1.finance.yahoo.com"
+      ],
+      "reasons": [
+        "low frequency (3 captures)",
+        "large average payload (19.7KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "finance.result.earnings",
+        "finance.error",
+        "finance.result.economicEvents"
+      ],
+      "firstSeen": "2026-01-21T20:44:53.357Z",
+      "lastSeen": "2026-01-21T20:44:55.021Z"
+    },
+    {
+      "endpointKey": "GET /xhr/i18n",
+      "method": "GET",
+      "normalizedPath": "/xhr/i18n",
+      "score": 0.523,
+      "count": 2,
+      "avgSize": 129397,
+      "maxSize": 129400,
+      "schemaHashes": [
+        "89bf9c15c21fec51b79766c69049be015a32b2c54bb6f64d29427e8dbf96ca65"
+      ],
+      "statusCounts": {
+        "200": 2
+      },
+      "statusDistribution": {
+        "200": 2
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "ca.finance.yahoo.com"
+      ],
+      "reasons": [
+        "low frequency (2 captures)",
+        "large average payload (126.4KB)",
+        "stable schema (1 variant)"
+      ],
+      "sampleKeyPaths": [
+        "common.10_Y",
+        "common.1_D",
+        "common.1_DAY",
+        "common.1_M",
+        "common.1_MONTH",
+        "common.1_Y",
+        "common.24_HR_MARKET",
+        "common.2_Y",
+        "common.3_M",
+        "common.5_D",
+        "quote.10_YR_EXPENSE_PROJECTION",
+        "quote.200_DAY_MOVING_AVG",
+        "quote.24HR_VOLUME",
+        "quote.24HR_VOLUME_ALL_CURRENCY",
+        "quote.24HR_VOLUME_TOOLTIP",
+        "quote.3_YR_EARNINGS_GROWTH",
+        "quote.3_YR_EXPENSE_PROJECTION",
+        "quote.50_DAY_MOVING_AVG",
+        "quote.52_WK_HIGH",
+        "quote.52_WK_LOW",
+        "leaf-chart.ACCESS_ADVANCED_CHART",
+        "leaf-chart.AGGREGATED_TYPES",
+        "leaf-chart.ALL_INDICATORS",
+        "leaf-chart.APPLIED",
+        "leaf-chart.APPLY",
+        "leaf-chart.BAR_REPLAY",
+        "leaf-chart.BEARISH",
+        "leaf-chart.BULLISH",
+        "leaf-chart.CHARTIQ_INTERVAL_DAY",
+        "leaf-chart.CHARTIQ_INTERVAL_DAYS"
+      ],
+      "firstSeen": "2026-01-21T20:44:53.190Z",
+      "lastSeen": "2026-01-21T20:44:53.210Z"
+    },
+    {
+      "endpointKey": "POST /xhr/ybar",
+      "method": "POST",
+      "normalizedPath": "/xhr/ybar",
+      "score": 0.512,
+      "count": 1,
+      "avgSize": 488097,
+      "maxSize": 488097,
+      "schemaHashes": [
+        "ea696d6658d2f3953efa23d8f07dd8fb0214d631997e334775ee45b49af36365"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "ca.finance.yahoo.com"
+      ],
+      "reasons": [
+        "large average payload (476.7KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "assets.bottom.blob",
+        "html",
+        "version"
+      ],
+      "firstSeen": "2026-01-21T20:44:54.169Z",
+      "lastSeen": "2026-01-21T20:44:54.169Z"
+    },
+    {
+      "endpointKey": "GET /v1/finance/screener/predefined/saved",
+      "method": "GET",
+      "normalizedPath": "/v1/finance/screener/predefined/saved",
+      "score": 0.512,
+      "count": 1,
+      "avgSize": 183177,
+      "maxSize": 183177,
+      "schemaHashes": [
+        "eab762a03fd979a04cc4706e6536d382bc89d2d1356afcd054a16b2235ecd471"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "query1.finance.yahoo.com"
+      ],
+      "reasons": [
+        "large average payload (178.9KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "finance.result",
+        "finance.error"
+      ],
+      "firstSeen": "2026-01-21T20:44:55.048Z",
+      "lastSeen": "2026-01-21T20:44:55.048Z"
+    },
+    {
+      "endpointKey": "POST /v1/finance/visualization",
+      "method": "POST",
+      "normalizedPath": "/v1/finance/visualization",
+      "score": 0.512,
+      "count": 1,
+      "avgSize": 16874,
+      "maxSize": 16874,
+      "schemaHashes": [
+        "eab762a03fd979a04cc4706e6536d382bc89d2d1356afcd054a16b2235ecd471"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "query1.finance.yahoo.com"
+      ],
+      "reasons": [
+        "large average payload (16.5KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "finance.result",
+        "finance.error"
+      ],
+      "firstSeen": "2026-01-21T20:44:55.608Z",
+      "lastSeen": "2026-01-21T20:44:55.608Z"
+    },
+    {
+      "endpointKey": "GET /uc/finance/cosaic/temporaryAssets/us_market_5.6.14.json",
+      "method": "GET",
+      "normalizedPath": "/uc/finance/cosaic/temporaryAssets/us_market_5.6.14.json",
+      "score": 0.512,
+      "count": 1,
+      "avgSize": 99979,
+      "maxSize": 99979,
+      "schemaHashes": [
+        "15f8872e6f8bcf749e5d2174d6f0423701cfb19695934c9702a4d29268688f60"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "s.yimg.com"
+      ],
+      "reasons": [
+        "large average payload (97.6KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "name",
+        "market_tz",
+        "hours_aligned",
+        "rules[0].dayofweek",
+        "rules[0].open",
+        "rules[0].close"
+      ],
+      "firstSeen": "2026-01-21T20:44:55.995Z",
+      "lastSeen": "2026-01-21T20:44:55.995Z"
+    },
+    {
+      "endpointKey": "GET /getconfig/sodar",
+      "method": "GET",
+      "normalizedPath": "/getconfig/sodar",
+      "score": 0.512,
+      "count": 1,
+      "avgSize": 17226,
+      "maxSize": 17226,
+      "schemaHashes": [
+        "d7e2d0c2f6cfc9f3981dd90007caa6b6aec471ceacd6392c49b2f33b25c71e7c"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "pagead2.googlesyndication.com"
+      ],
+      "reasons": [
+        "large average payload (16.8KB)",
+        "stable schema (1 variant)"
+      ],
+      "sampleKeyPaths": [
+        "sodar_query_id",
+        "injector_basename",
+        "bg_hash_basename",
+        "bg_binary",
+        "rc_enable",
+        "bg_snapshot_delay_ms",
+        "is_gen_204"
+      ],
+      "firstSeen": "2026-01-21T20:44:57.890Z",
+      "lastSeen": "2026-01-21T20:44:57.890Z"
+    },
+    {
+      "endpointKey": "GET /v8/finance/chart/AAPL",
+      "method": "GET",
+      "normalizedPath": "/v8/finance/chart/AAPL",
+      "score": 0.512,
+      "count": 1,
+      "avgSize": 104949,
+      "maxSize": 104949,
+      "schemaHashes": [
+        "cc57fc1903e444cf6a726490b43b27ee9f87facc037f86872201847c565b45fb"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "query2.finance.yahoo.com"
+      ],
+      "reasons": [
+        "large average payload (102.5KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "chart.result",
+        "chart.error"
+      ],
+      "firstSeen": "2026-01-21T20:44:58.556Z",
+      "lastSeen": "2026-01-21T20:44:58.556Z"
+    },
+    {
+      "endpointKey": "GET /v1/video/sapi/streams/:id",
+      "method": "GET",
+      "normalizedPath": "/v1/video/sapi/streams/:id",
+      "score": 0.438,
+      "count": 1,
+      "avgSize": 7550,
+      "maxSize": 7550,
+      "schemaHashes": [
+        "a8b771920b8319e47251d1360f5e880bc18e8d329b0f0d003ea3c7e615558947"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "video-api.yql.yahoo.com"
+      ],
+      "reasons": [
+        "large average payload (7.4KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "query.results.mediaObj",
+        "query.results.colo",
+        "query.results.instrument",
+        "query.results.connectionType"
+      ],
+      "firstSeen": "2026-01-21T20:44:56.009Z",
+      "lastSeen": "2026-01-21T20:44:56.009Z"
+    },
+    {
+      "endpointKey": "GET /v7/finance/quote",
+      "method": "GET",
+      "normalizedPath": "/v7/finance/quote",
+      "score": 0.361,
+      "count": 2,
+      "avgSize": 4603,
+      "maxSize": 5609,
+      "schemaHashes": [
+        "c174660e20c6485584ed9316aee4c4950024bd59409fb70855a19ca9b704a14c"
+      ],
+      "statusCounts": {
+        "200": 2
+      },
+      "statusDistribution": {
+        "200": 2
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "query1.finance.yahoo.com"
+      ],
+      "reasons": [
+        "low frequency (2 captures)",
+        "large average payload (4.5KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "quoteResponse.result",
+        "quoteResponse.error"
+      ],
+      "firstSeen": "2026-01-21T20:44:53.348Z",
+      "lastSeen": "2026-01-21T20:44:56.151Z"
+    },
+    {
+      "endpointKey": "GET /ws/:id/v1/finance/timeseries/AAPL",
+      "method": "GET",
+      "normalizedPath": "/ws/:id/v1/finance/timeseries/AAPL",
+      "score": 0.323,
+      "count": 2,
+      "avgSize": 3308,
+      "maxSize": 5876,
+      "schemaHashes": [
+        "b179e7515844f557e9d5d3a4607e41e001f43646459dad9a8ab2cb0b674e6a62"
+      ],
+      "statusCounts": {
+        "200": 2
+      },
+      "statusDistribution": {
+        "200": 2
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "query1.finance.yahoo.com"
+      ],
+      "reasons": [
+        "low frequency (2 captures)",
+        "large average payload (3.2KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "timeseries.result",
+        "timeseries.error"
+      ],
+      "firstSeen": "2026-01-21T20:44:53.324Z",
+      "lastSeen": "2026-01-21T20:45:00.042Z"
+    },
+    {
+      "endpointKey": "GET /pagead/ima_ppub_config",
+      "method": "GET",
+      "normalizedPath": "/pagead/ima_ppub_config",
+      "score": 0.229,
+      "count": 1,
+      "avgSize": 3897,
+      "maxSize": 3897,
+      "schemaHashes": [],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 0,
+      "hosts": [
+        "securepubads.g.doubleclick.net"
+      ],
+      "reasons": [
+        "large average payload (3.8KB)",
+        "has array structure"
+      ],
+      "sampleKeyPaths": [],
+      "firstSeen": "2026-01-21T20:45:00.448Z",
+      "lastSeen": "2026-01-21T20:45:00.448Z"
+    },
+    {
+      "endpointKey": "GET /v1/finance/quoteType/",
+      "method": "GET",
+      "normalizedPath": "/v1/finance/quoteType/",
+      "score": 0.224,
+      "count": 1,
+      "avgSize": 398,
+      "maxSize": 398,
+      "schemaHashes": [
+        "04486e2b5959dd44c9db41a55cbbc761e45ae67b11da35a1f70fa0d26347907b"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "query2.finance.yahoo.com"
+      ],
+      "reasons": [
+        "small average payload (398 bytes)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "quoteType.result",
+        "quoteType.error"
+      ],
+      "firstSeen": "2026-01-21T20:44:55.819Z",
+      "lastSeen": "2026-01-21T20:44:55.819Z"
+    },
+    {
+      "endpointKey": "GET /v1/consentRecord",
+      "method": "GET",
+      "normalizedPath": "/v1/consentRecord",
+      "score": 0.221,
+      "count": 1,
+      "avgSize": 304,
+      "maxSize": 304,
+      "schemaHashes": [
+        "b44048aff27e1446cdb0379c852292738caa96d04f7f7bf69d4d051d9f04ae30"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "guce.yahoo.com"
+      ],
+      "reasons": [
+        "small average payload (304 bytes)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)"
+      ],
+      "sampleKeyPaths": [
+        "identifier",
+        "identifierType",
+        "dsrState.state",
+        "dsrState.reason",
+        "dsrState.modificationTime",
+        "tosRecords.eu.locale",
+        "tosRecords.eu.consentEvents"
+      ],
+      "firstSeen": "2026-01-21T20:44:52.564Z",
+      "lastSeen": "2026-01-21T20:44:52.564Z"
+    },
+    {
+      "endpointKey": "https://pagead2.googlesyndication.com/pagead/gen_204?id=av-js&type=fle-fetch-start2",
+      "method": "GET",
+      "normalizedPath": "https://pagead2.googlesyndication.com/pagead/gen_204?id=av-js&type=fle-fetch-start2",
+      "score": 0.094,
+      "count": 8,
+      "avgSize": 0,
+      "maxSize": 0,
+      "schemaHashes": [],
+      "statusCounts": {
+        "204": 8
+      },
+      "statusDistribution": {
+        "204": 8
+      },
+      "distinctSchemas": 0,
+      "hosts": [
+        "pagead2.googlesyndication.com"
+      ],
+      "reasons": [
+        "low frequency (8 captures)"
+      ],
+      "sampleKeyPaths": [],
+      "firstSeen": "2026-01-21T20:44:59.681Z",
+      "lastSeen": "2026-01-21T20:45:00.052Z"
+    },
+    {
+      "endpointKey": "https://pagead2.googlesyndication.com/pagead/gen_204?id=av-js&type=colleague-executed&name=4",
+      "method": "GET",
+      "normalizedPath": "https://pagead2.googlesyndication.com/pagead/gen_204?id=av-js&type=colleague-executed&name=4",
+      "score": 0.094,
+      "count": 8,
+      "avgSize": 0,
+      "maxSize": 0,
+      "schemaHashes": [],
+      "statusCounts": {
+        "204": 8
+      },
+      "statusDistribution": {
+        "204": 8
+      },
+      "distinctSchemas": 0,
+      "hosts": [
+        "pagead2.googlesyndication.com"
+      ],
+      "reasons": [
+        "low frequency (8 captures)"
+      ],
+      "sampleKeyPaths": [],
+      "firstSeen": "2026-01-21T20:44:59.683Z",
+      "lastSeen": "2026-01-21T20:45:00.052Z"
+    },
+    {
+      "endpointKey": "https://pagead2.googlesyndication.com/pagead/gen_204?id=av-js&type=reach&proto=CAlgAWgD",
+      "method": "GET",
+      "normalizedPath": "https://pagead2.googlesyndication.com/pagead/gen_204?id=av-js&type=reach&proto=CAlgAWgD",
+      "score": 0.094,
+      "count": 8,
+      "avgSize": 0,
+      "maxSize": 0,
+      "schemaHashes": [],
+      "statusCounts": {
+        "204": 8
+      },
+      "statusDistribution": {
+        "204": 8
+      },
+      "distinctSchemas": 0,
+      "hosts": [
+        "pagead2.googlesyndication.com"
+      ],
+      "reasons": [
+        "low frequency (8 captures)"
+      ],
+      "sampleKeyPaths": [],
+      "firstSeen": "2026-01-21T20:44:59.684Z",
+      "lastSeen": "2026-01-21T20:45:00.053Z"
+    },
+    {
+      "endpointKey": "https://udc.yahoo.com/v2/public/yql?yhlVer=2&yhlClient=rapid&yhlS=1197812781&yhlCT=2&yhlBTMS=1769028290939&yhlClientVer=3.53.30&yhlRnd=980BUHqvCZmpWwON&yhlCompressed=0",
+      "method": "GET",
+      "normalizedPath": "https://udc.yahoo.com/v2/public/yql?yhlVer=2&yhlClient=rapid&yhlS=1197812781&yhlCT=2&yhlBTMS=1769028290939&yhlClientVer=3.53.30&yhlRnd=980BUHqvCZmpWwON&yhlCompressed=0",
+      "score": 0.012,
+      "count": 1,
+      "avgSize": 0,
+      "maxSize": 0,
+      "schemaHashes": [],
+      "statusCounts": {
+        "204": 1
+      },
+      "statusDistribution": {
+        "204": 1
+      },
+      "distinctSchemas": 0,
+      "hosts": [
+        "udc.yahoo.com"
+      ],
+      "reasons": [],
+      "sampleKeyPaths": [],
+      "firstSeen": "2026-01-21T20:44:51.011Z",
+      "lastSeen": "2026-01-21T20:44:51.011Z"
+    }
+  ]
+}

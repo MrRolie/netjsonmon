@@ -1,0 +1,6 @@
+{"endpointKey":"POST /nimbus_ms/remote","label":"non-data","labeledAt":"2026-01-26T17:56:02.985Z","source":"manual"}
+{"endpointKey":"POST /xhr/ybar","label":"non-data","labeledAt":"2026-01-26T19:07:09.708Z","source":"manual"}
+{"endpointKey":"GET /v1/finance/screener/predefined/saved","label":"data","labeledAt":"2026-01-26T19:07:28.913Z","source":"manual"}
+{"endpointKey":"POST /v1/finance/visualization","label":"non-data","labeledAt":"2026-01-26T19:08:13.874Z","source":"manual"}
+{"endpointKey":"GET /getconfig/sodar","label":"non-data","labeledAt":"2026-01-26T19:09:09.492Z","source":"manual"}
+{"endpointKey":"GET /v8/finance/chart/AAPL","label":"data","labeledAt":"2026-01-26T19:09:27.207Z","source":"manual"}

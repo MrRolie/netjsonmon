@@ -46,6 +46,7 @@ netjsonmon run https://jsonplaceholder.typicode.com/users --monitorMs 5000 --out
 - `netjsonmon init` creates a config file and sample flow.
 - `netjsonmon inspect <captureDir>` shows a summary for a previous run.
 - `netjsonmon endpoints <captureDir>` filters and exports endpoints.
+- `netjsonmon label <captureDir>` manually labels endpoints and exports training data.
 
 ### Run Options
 
@@ -145,10 +146,38 @@ captures/
     index.jsonl        # One JSON record per capture
     summary.json       # Endpoint aggregation and scoring
     endpoints.jsonl    # All endpoints with metrics
+    labels/
+      labels.jsonl     # Manual labels per endpoint (created by label command)
+      training.jsonl   # Exported features + labels (optional)
     bodies/
       <hash>.json      # Externalized response bodies
     session.har        # Optional HAR file (--saveHar)
     trace.zip          # Optional Playwright trace (--trace)
+
+training-captures/
+  <timestamp>-<runId>/ # Same structure as captures/ (tracked for collaborative labeling)
+```
+
+### Labeling Endpoints (Prompt 12)
+
+```bash
+# Interactive labeling (writes labels/labels.jsonl)
+netjsonmon label ./captures/<runId>
+
+# Export training data (features + label)
+netjsonmon label ./captures/<runId> --export
+```
+
+### Shared Training Captures
+
+For collaborative labeling, place capture folders under `training-captures/` (tracked in git):
+
+```bash
+# Label a specific capture from the pool (you'll be prompted to pick)
+netjsonmon label ./training-captures
+
+# Export training data from selected captures in the pool
+netjsonmon label ./training-captures --export
 ```
 
 ## Development
@@ -170,7 +199,7 @@ npm test
 
 - **Main plan completed**: Prompts 1-11 in `docs/PLAN.md` are implemented, including CLI commands, capture pipeline, storage, scoring, and validation runs.
 - **Validation results**: See `docs/VALIDATION_RESULTS.md` for real-world test coverage and known issues.
-- **Extensions not yet implemented**: Prompts 12-14 (labeling, ML classifier, online prediction) are tracked in `docs/EXTENSIONS.md`.
+- **Extensions not yet implemented**: Prompts 13-14 (ML classifier, online prediction) are tracked in `docs/EXTENSIONS.md`.
 
 ## License
 

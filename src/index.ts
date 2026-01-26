@@ -11,6 +11,7 @@ import { runCommand } from './commands/run.js';
 import { initCommand } from './commands/init.js';
 import { inspectCommand } from './commands/inspect.js';
 import { endpointsCommand } from './commands/endpoints.js';
+import { labelCommand } from './commands/label.js';
 
 const program = new Command();
 
@@ -116,6 +117,25 @@ program
   .action(async (captureDir: string, options: any) => {
     try {
       await endpointsCommand(captureDir, options);
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// Label command (manual labeling + training export)
+program
+  .command('label <captureDir>')
+  .description('Manually label endpoints and export training data')
+  .option('--minScore <score>', 'Minimum score threshold (0-1)')
+  .option('--maxScore <score>', 'Maximum score threshold (0-1)')
+  .option('--limit <count>', 'Limit number of endpoints to label')
+  .option('--includeLabeled', 'Include endpoints that already have labels', false)
+  .option('--export', 'Export training.jsonl from existing labels', false)
+  .option('--out <filename>', 'Output filename for training export')
+  .action(async (captureDir: string, options: any) => {
+    try {
+      await labelCommand(captureDir, options);
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
       process.exit(1);

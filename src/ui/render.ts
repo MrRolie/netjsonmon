@@ -154,6 +154,7 @@ export function renderNextActions(captureDir: string): string {
     chalk.bold('\nNext Actions:'),
     '  • View detailed summary: ' + chalk.cyan(`netjsonmon inspect ${captureDir}`),
     '  • Filter endpoints: ' + chalk.cyan(`netjsonmon endpoints ${captureDir} --minScore 0.6`),
+    '  • Label endpoints: ' + chalk.cyan(`netjsonmon label ${captureDir}`),
     '  • Export to CSV: ' + chalk.cyan(`netjsonmon endpoints ${captureDir} --export csv`),
     '  • Open folder: ' + chalk.gray(captureDir),
   ];
