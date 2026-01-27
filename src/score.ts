@@ -17,6 +17,9 @@ export interface EndpointAggregate {
   samplePaths: string[];
   firstSeen: string;
   lastSeen: string;
+  bodyAvailableCount: number;
+  jsonParseSuccessCount: number;
+  noBodyCount: number;
   
   // Aggregated feature data
   hasArrayStructure: boolean;
@@ -30,6 +33,9 @@ export interface ScoredEndpoint extends EndpointAggregate {
   avgPayloadSize: number;
   maxPayloadSize: number;
   distinctSchemas: number;
+  bodyAvailableRate: number;
+  bodyRate: number;
+  bodyEvidenceFactor: number;
 }
 
 interface ScoringWeights {
@@ -44,6 +50,24 @@ const DEFAULT_WEIGHTS: ScoringWeights = {
   payloadSize: 0.3,
   structure: 0.2,
   stability: 0.2,
+};
+
+export interface BodyEvidenceConfig {
+  /**
+   * Multiplier applied to bodyRate before clamping.
+   * Values > 1.0 make moderate body rates reach full strength sooner.
+   */
+  scale: number;
+  /**
+   * Minimum factor applied when no JSON bodies are observed.
+   * Keeps endpoints visible but heavily penalized.
+   */
+  minFactor: number;
+}
+
+const BODY_EVIDENCE_CONFIG: BodyEvidenceConfig = {
+  scale: 1.5,
+  minFactor: 0.05,
 };
 
 /**
@@ -72,6 +96,12 @@ export function scoreEndpoint(
     : 0;
   
   const distinctSchemas = new Set(aggregate.schemaHashes).size;
+  const bodyAvailableRate = aggregate.count > 0
+    ? aggregate.bodyAvailableCount / aggregate.count
+    : 0;
+  const bodyRate = aggregate.count > 0
+    ? aggregate.jsonParseSuccessCount / aggregate.count
+    : 0;
   
   // 1. Frequency score (0-0.3): normalized by total captures
   // Higher frequency = more likely to be an important endpoint
@@ -135,6 +165,20 @@ export function scoreEndpoint(
   if (aggregate.avgDepth > 2) {
     reasons.push(`deeply nested structure (avg depth: ${aggregate.avgDepth.toFixed(1)})`);
   }
+
+  // 5. Body evidence gating (factor applied to total score)
+  // Strong JSON body evidence is a prerequisite for data endpoints.
+  const bodyEvidenceFactor = computeBodyEvidenceFactor(bodyRate);
+  score *= bodyEvidenceFactor;
+
+  const bodyPct = (bodyRate * 100).toFixed(0);
+  if (bodyRate >= 0.75) {
+    reasons.push(`strong JSON body evidence (${aggregate.jsonParseSuccessCount}/${aggregate.count}, ${bodyPct}%)`);
+  } else if (bodyRate > 0) {
+    reasons.push(`partial JSON body evidence (${aggregate.jsonParseSuccessCount}/${aggregate.count}, ${bodyPct}%)`);
+  } else {
+    reasons.push(`no JSON bodies observed (${aggregate.jsonParseSuccessCount}/${aggregate.count}); score down-weighted`);
+  }
   
   // Ensure score is clamped to [0, 1]
   score = Math.max(0, Math.min(1, score));
@@ -146,6 +190,9 @@ export function scoreEndpoint(
     avgPayloadSize,
     maxPayloadSize,
     distinctSchemas,
+    bodyAvailableRate,
+    bodyRate,
+    bodyEvidenceFactor,
   };
 }
 
@@ -166,4 +213,17 @@ export function sortByScore(endpoints: ScoredEndpoint[]): ScoredEndpoint[] {
  */
 export function getScoringWeights(): ScoringWeights {
   return { ...DEFAULT_WEIGHTS };
+}
+
+/**
+ * Get body evidence configuration for reproducibility logging.
+ */
+export function getBodyEvidenceConfig(): BodyEvidenceConfig {
+  return { ...BODY_EVIDENCE_CONFIG };
+}
+
+function computeBodyEvidenceFactor(bodyRate: number): number {
+  const scaled = bodyRate * BODY_EVIDENCE_CONFIG.scale;
+  const clamped = Math.min(1, Math.max(0, scaled));
+  return Math.max(BODY_EVIDENCE_CONFIG.minFactor, clamped);
 }

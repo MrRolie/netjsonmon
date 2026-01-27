@@ -36,6 +36,7 @@ netjsonmon run https://jsonplaceholder.typicode.com/users --monitorMs 5000 --out
 - Deterministic capture window with JSON-only filtering.
 - Safe storage with redaction of common secrets and PII.
 - Endpoint summary and scoring to highlight likely data APIs.
+- Body-evidence-aware scoring: endpoints without JSON bodies are heavily down-weighted.
 
 ## Advanced Usage
 
@@ -157,6 +158,14 @@ captures/
 training-captures/
   <timestamp>-<runId>/ # Same structure as captures/ (tracked for collaborative labeling)
 ```
+
+### Scoring Notes (Body Evidence)
+
+Endpoint scoring now includes a body-evidence gate based on observed JSON bodies:
+
+- `bodyRate` = `jsonParseSuccessCount / count`
+- `bodyEvidenceFactor` is applied to the total score
+- Body metrics are included in both `summary.json` and `endpoints.jsonl`
 
 ### Labeling Endpoints (Prompt 12)
 

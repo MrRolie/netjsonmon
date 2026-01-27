@@ -6,21 +6,43 @@ import { describe, it, expect } from 'vitest';
 import { scoreEndpoint, sortByScore, getScoringWeights, type EndpointAggregate } from '../src/score.js';
 
 describe('scoreEndpoint', () => {
-  const createAggregate = (overrides: Partial<EndpointAggregate> = {}): EndpointAggregate => ({
-    endpointKey: 'GET /api/test',
-    count: 10,
-    statusCounts: { 200: 10 },
-    hosts: ['api.example.com'],
-    payloadSizes: [1000, 2000, 3000],
-    schemaHashes: ['abc123'],
-    samplePaths: ['id', 'name'],
-    firstSeen: '2026-01-20T00:00:00Z',
-    lastSeen: '2026-01-20T00:10:00Z',
-    hasArrayStructure: false,
-    hasDataFlags: false,
-    avgDepth: 1.5,
-    ...overrides,
-  });
+  const createAggregate = (overrides: Partial<EndpointAggregate> = {}): EndpointAggregate => {
+    const base: EndpointAggregate = {
+      endpointKey: 'GET /api/test',
+      count: 10,
+      statusCounts: { 200: 10 },
+      hosts: ['api.example.com'],
+      payloadSizes: [1000, 2000, 3000],
+      schemaHashes: ['abc123'],
+      samplePaths: ['id', 'name'],
+      firstSeen: '2026-01-20T00:00:00Z',
+      lastSeen: '2026-01-20T00:10:00Z',
+      bodyAvailableCount: 10,
+      jsonParseSuccessCount: 10,
+      noBodyCount: 0,
+      hasArrayStructure: false,
+      hasDataFlags: false,
+      avgDepth: 1.5,
+    };
+
+    const merged: EndpointAggregate = {
+      ...base,
+      ...overrides,
+    };
+
+    // Keep body evidence aligned with count unless explicitly overridden.
+    if (overrides.bodyAvailableCount === undefined) {
+      merged.bodyAvailableCount = merged.count;
+    }
+    if (overrides.jsonParseSuccessCount === undefined) {
+      merged.jsonParseSuccessCount = merged.bodyAvailableCount;
+    }
+    if (overrides.noBodyCount === undefined) {
+      merged.noBodyCount = Math.max(0, merged.count - merged.bodyAvailableCount);
+    }
+
+    return merged;
+  };
 
   it('should assign higher score to high-frequency endpoints', () => {
     const lowFreq = scoreEndpoint(createAggregate({ count: 5 }), 100);
@@ -121,6 +143,27 @@ describe('scoreEndpoint', () => {
   it('should include depth heuristic in reasons when deep', () => {
     const deep = scoreEndpoint(createAggregate({ avgDepth: 3.5 }), 100);
     expect(deep.reasons.some(r => r.includes('deeply nested'))).toBe(true);
+  });
+
+  it('should heavily penalize endpoints without JSON bodies', () => {
+    const withBodies = scoreEndpoint(createAggregate(), 100);
+    const noBodies = scoreEndpoint(
+      createAggregate({
+        bodyAvailableCount: 0,
+        jsonParseSuccessCount: 0,
+        noBodyCount: 10,
+        payloadSizes: [],
+        schemaHashes: [],
+        hasArrayStructure: false,
+        hasDataFlags: false,
+      }),
+      100
+    );
+
+    expect(withBodies.score).toBeGreaterThan(noBodies.score);
+    expect(noBodies.bodyRate).toBe(0);
+    expect(noBodies.bodyEvidenceFactor).toBeGreaterThan(0);
+    expect(noBodies.reasons.some(r => r.includes('no JSON bodies observed'))).toBe(true);
   });
 });
 

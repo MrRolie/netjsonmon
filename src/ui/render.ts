@@ -179,7 +179,16 @@ export function renderEndpointDetail(endpoint: {
   sampleKeyPaths: string[];
   firstSeen: string;
   lastSeen: string;
+  bodyRate?: number;
+  jsonParseSuccessCount?: number;
+  bodyAvailableCount?: number;
+  noBodyCount?: number;
+  bodyEvidenceFactor?: number;
 }): string {
+  const bodyRateLine = endpoint.bodyRate !== undefined
+    ? `  JSON Body Rate: ${formatScore(endpoint.bodyRate)} (${formatNumber(endpoint.jsonParseSuccessCount ?? 0)}/${formatNumber(endpoint.count)})`
+    : null;
+
   const lines = [
     chalk.bold.cyan(`${endpoint.method} ${endpoint.normalizedPath}`),
     '',
@@ -189,6 +198,7 @@ export function renderEndpointDetail(endpoint: {
     `  Avg Size: ${formatBytes(endpoint.avgSize)}`,
     `  Max Size: ${formatBytes(endpoint.maxSize)}`,
     `  Schema Variants: ${endpoint.schemaVariants}`,
+    ...(bodyRateLine ? [bodyRateLine] : []),
     '',
     chalk.bold('Scoring Reasons'),
     ...endpoint.reasons.map(r => `  • ${r}`),

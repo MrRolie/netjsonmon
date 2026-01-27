@@ -11,7 +11,14 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import type { CaptureRecord, RunMetadata } from './types.js';
 import type { Features } from './features.js';
-import { scoreEndpoint, sortByScore, getScoringWeights, type EndpointAggregate, type ScoredEndpoint } from './score.js';
+import {
+  scoreEndpoint,
+  sortByScore,
+  getScoringWeights,
+  getBodyEvidenceConfig,
+  type EndpointAggregate,
+  type ScoredEndpoint,
+} from './score.js';
 import { renderEndpointsTable, renderNextActions, outputJSON, divider, type EndpointSummary, type OutputMode } from './ui/render.js';
 import { formatNumber } from './ui/format.js';
 
@@ -134,6 +141,9 @@ function createEmptyAggregate(endpointKey: string): EndpointAggregate {
     samplePaths: [],
     firstSeen: '',
     lastSeen: '',
+    bodyAvailableCount: 0,
+    jsonParseSuccessCount: 0,
+    noBodyCount: 0,
     hasArrayStructure: false,
     hasDataFlags: false,
     avgDepth: 0,
@@ -145,6 +155,16 @@ function createEmptyAggregate(endpointKey: string): EndpointAggregate {
  */
 function updateAggregate(agg: EndpointAggregate, record: CaptureRecord): void {
   agg.count++;
+
+  // Body evidence tracking
+  if (record.bodyAvailable) {
+    agg.bodyAvailableCount++;
+  } else {
+    agg.noBodyCount++;
+  }
+  if (record.jsonParseSuccess) {
+    agg.jsonParseSuccessCount++;
+  }
   
   // Status distribution
   agg.statusCounts[record.status] = (agg.statusCounts[record.status] || 0) + 1;
@@ -242,6 +262,12 @@ function writeSummaryJson(
       statusDistribution: ep.statusCounts,
       distinctSchemas: ep.distinctSchemas,
       hosts: ep.hosts,
+      bodyAvailableCount: ep.bodyAvailableCount,
+      jsonParseSuccessCount: ep.jsonParseSuccessCount,
+      noBodyCount: ep.noBodyCount,
+      bodyAvailableRate: parseFloat(ep.bodyAvailableRate.toFixed(3)),
+      bodyRate: parseFloat(ep.bodyRate.toFixed(3)),
+      bodyEvidenceFactor: parseFloat(ep.bodyEvidenceFactor.toFixed(3)),
       reasons: ep.reasons,
       sampleKeyPaths: ep.samplePaths,
       firstSeen: ep.firstSeen,
@@ -262,6 +288,7 @@ function writeSummaryJson(
     truncatedBodies,
     totalEndpoints: endpoints.length,
     scoringWeights: getScoringWeights(),
+    bodyEvidence: getBodyEvidenceConfig(),
     endpoints: enrichedEndpoints,
   };
   
@@ -294,6 +321,12 @@ function writeEndpointsJsonl(runDir: string, endpoints: ScoredEndpoint[], mode: 
       statusCounts: ep.statusCounts,
       statusDistribution: ep.statusCounts,
       hosts: ep.hosts,
+      bodyAvailableCount: ep.bodyAvailableCount,
+      jsonParseSuccessCount: ep.jsonParseSuccessCount,
+      noBodyCount: ep.noBodyCount,
+      bodyAvailableRate: parseFloat(ep.bodyAvailableRate.toFixed(3)),
+      bodyRate: parseFloat(ep.bodyRate.toFixed(3)),
+      bodyEvidenceFactor: parseFloat(ep.bodyEvidenceFactor.toFixed(3)),
       sampleKeyPaths: ep.samplePaths.slice(0, 50), // Limit sample paths
       reasons: ep.reasons,
       firstSeen: ep.firstSeen,

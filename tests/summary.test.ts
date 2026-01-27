@@ -176,6 +176,40 @@ describe('generateSummary', () => {
     expect(endpoint.distinctSchemas).toBe(2);
   });
 
+  it('should include body evidence metrics in outputs', async () => {
+    const runMetadata: RunMetadata = {
+      runId: 'test-body-evidence',
+      startedAt: '2026-01-20T00:00:00Z',
+      url: 'https://example.com',
+      options: {} as any,
+    };
+
+    const captures: CaptureRecord[] = [
+      createTestCapture('GET /api/data', 200, 1000, false, true, 'schemaA', true, true),
+      createTestCapture('GET /api/data', 200, 1000, false, true, 'schemaA', true, true),
+      // Body available but not valid JSON (no feature extraction)
+      createTestCapture('GET /api/data', 200, 1000, false, true, 'schemaA', true, false),
+    ];
+
+    writeFileSync(join(TEST_RUN_DIR, 'run.json'), JSON.stringify(runMetadata));
+    writeFileSync(
+      join(TEST_RUN_DIR, 'index.jsonl'),
+      captures.map(c => JSON.stringify(c)).join('\n')
+    );
+
+    await generateSummary(TEST_RUN_DIR);
+
+    const summary = JSON.parse(readFileSync(join(TEST_RUN_DIR, 'summary.json'), 'utf-8'));
+    expect(summary.bodyEvidence).toBeDefined();
+
+    const endpoint = summary.endpoints.find((e: any) => e.endpointKey === 'GET /api/data');
+    expect(endpoint).toBeDefined();
+    expect(endpoint.jsonParseSuccessCount).toBe(2);
+    expect(endpoint.bodyAvailableCount).toBe(3);
+    expect(endpoint.bodyRate).toBeCloseTo(2 / 3, 3);
+    expect(endpoint.bodyEvidenceFactor).toBeGreaterThan(0);
+  });
+
   it('should sort endpoints by score descending', async () => {
     const runMetadata: RunMetadata = {
       runId: 'test-sorting',
@@ -260,8 +294,14 @@ function createTestCapture(
   payloadSize: number,
   hasArrayStructure: boolean,
   hasDataFlags: boolean,
-  schemaHash?: string
+  schemaHash?: string,
+  bodyAvailable: boolean = true,
+  jsonParseSuccess: boolean = true
 ): CaptureRecord {
+  const parseSuccess = bodyAvailable ? jsonParseSuccess : false;
+  const effectivePayloadSize = parseSuccess ? payloadSize : 0;
+  const effectiveSchemaHash = schemaHash || 'default-schema';
+
   return {
     timestamp: new Date().toISOString(),
     url: `https://example.com${endpointKey.replace('GET ', '').replace('POST ', '')}`,
@@ -270,25 +310,27 @@ function createTestCapture(
     requestHeaders: {},
     responseHeaders: {},
     contentType: 'application/json',
-    payloadSize,
-    bodyAvailable: true,
+    payloadSize: effectivePayloadSize,
+    bodyAvailable,
     truncated: false,
-    bodyHash: schemaHash || 'default-hash',
-    jsonParseSuccess: true,
+    bodyHash: parseSuccess ? (schemaHash || 'default-hash') : '',
+    jsonParseSuccess: parseSuccess,
     endpointKey,
-    features: {
-      isArray: hasArrayStructure,
-      isObject: !hasArrayStructure,
-      isPrimitive: false,
-      numKeys: 5,
-      topLevelKeys: ['id', 'name', 'email'],
-      depthEstimate: 2,
-      hasId: hasDataFlags,
-      hasItems: hasDataFlags,
-      hasResults: hasDataFlags,
-      hasData: hasDataFlags,
-      samplePaths: ['id', 'name'],
-      schemaHash: schemaHash || 'default-schema',
-    },
+    features: parseSuccess
+      ? {
+          isArray: hasArrayStructure,
+          isObject: !hasArrayStructure,
+          isPrimitive: false,
+          numKeys: 5,
+          topLevelKeys: ['id', 'name', 'email'],
+          depthEstimate: 2,
+          hasId: hasDataFlags,
+          hasItems: hasDataFlags,
+          hasResults: hasDataFlags,
+          hasData: hasDataFlags,
+          samplePaths: ['id', 'name'],
+          schemaHash: effectiveSchemaHash,
+        }
+      : undefined,
   } as CaptureRecord;
 }

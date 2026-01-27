@@ -37,6 +37,12 @@ interface EndpointRecord {
   sampleKeyPaths: string[];
   firstSeen: string;
   lastSeen: string;
+  bodyAvailableCount?: number;
+  jsonParseSuccessCount?: number;
+  noBodyCount?: number;
+  bodyAvailableRate?: number;
+  bodyRate?: number;
+  bodyEvidenceFactor?: number;
   hasArrayStructure?: boolean;
   hasDataFlags?: boolean;
   avgDepth?: number;
@@ -401,9 +407,12 @@ function renderEndpointForLabel(
   existing?: LabelRecord,
   sample?: EndpointSample
 ): void {
+  const bodyInfo = endpoint.bodyRate !== undefined
+    ? `  Body: ${Math.round(endpoint.bodyRate * 100)}% JSON`
+    : '';
   console.log();
   console.log(chalk.bold(`${index}/${total} ${endpoint.method} ${endpoint.normalizedPath}`));
-  console.log(`Score: ${chalk.green(formatScore(endpoint.score))}  Count: ${endpoint.count}  Avg Size: ${formatBytes(endpoint.avgSize)}  Max: ${formatBytes(endpoint.maxSize)}`);
+  console.log(`Score: ${chalk.green(formatScore(endpoint.score))}  Count: ${endpoint.count}  Avg Size: ${formatBytes(endpoint.avgSize)}  Max: ${formatBytes(endpoint.maxSize)}${bodyInfo}`);
   if (endpoint.reasons?.length) {
     console.log('Reasons: ' + chalk.gray(truncateArray(endpoint.reasons, 3, 60)));
   }
@@ -595,6 +604,12 @@ function buildTrainingRecord(endpoint: EndpointRecord, label: LabelRecord, run?:
       maxSize: endpoint.maxSize,
       distinctSchemas: endpoint.distinctSchemas,
       statusCounts: endpoint.statusCounts,
+      bodyAvailableCount: endpoint.bodyAvailableCount ?? 0,
+      jsonParseSuccessCount: endpoint.jsonParseSuccessCount ?? 0,
+      noBodyCount: endpoint.noBodyCount ?? Math.max(0, endpoint.count - (endpoint.bodyAvailableCount ?? 0)),
+      bodyAvailableRate: endpoint.bodyAvailableRate ?? 0,
+      bodyRate: endpoint.bodyRate ?? 0,
+      bodyEvidenceFactor: endpoint.bodyEvidenceFactor ?? 0,
       hasArrayStructure: Boolean(endpoint.hasArrayStructure),
       hasDataFlags: Boolean(endpoint.hasDataFlags),
       avgDepth: endpoint.avgDepth ?? 0,

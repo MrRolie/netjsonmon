@@ -36,6 +36,12 @@ interface Endpoint {
   sampleKeyPaths?: string[];
   firstSeen: string;
   lastSeen: string;
+  bodyAvailableCount?: number;
+  jsonParseSuccessCount?: number;
+  noBodyCount?: number;
+  bodyAvailableRate?: number;
+  bodyRate?: number;
+  bodyEvidenceFactor?: number;
 }
 
 export async function endpointsCommand(captureDir: string, options: EndpointsCommandOptions): Promise<void> {
@@ -146,12 +152,16 @@ async function exportEndpoints(endpoints: Endpoint[], format: 'csv' | 'jsonl' | 
   
   switch (format) {
     case 'csv':
-      content = 'Method,Path,Score,Count,AvgSize,MaxSize,Hosts,Statuses,Reasons\n';
+      content = 'Method,Path,Score,Count,AvgSize,MaxSize,BodyRate,JsonBodies,BodyAvailable,NoBody,Hosts,Statuses,Reasons\n';
       for (const ep of endpoints) {
         const hosts = ep.hosts.join(';');
         const statuses = Object.entries(ep.statusDistribution).map(([s, c]) => `${s}:${c}`).join(';');
         const reasons = ep.reasons.join('; ');
-        content += `${ep.method},"${ep.normalizedPath}",${ep.score},${ep.count},${ep.avgSize},${ep.maxSize},"${hosts}","${statuses}","${reasons}"\n`;
+        const bodyRate = ep.bodyRate ?? '';
+        const jsonBodies = ep.jsonParseSuccessCount ?? '';
+        const bodyAvailable = ep.bodyAvailableCount ?? '';
+        const noBody = ep.noBodyCount ?? '';
+        content += `${ep.method},"${ep.normalizedPath}",${ep.score},${ep.count},${ep.avgSize},${ep.maxSize},${bodyRate},${jsonBodies},${bodyAvailable},${noBody},"${hosts}","${statuses}","${reasons}"\n`;
       }
       break;
       
@@ -161,11 +171,12 @@ async function exportEndpoints(endpoints: Endpoint[], format: 'csv' | 'jsonl' | 
       
     case 'md':
       content = '# Endpoints\n\n';
-      content += '| Rank | Score | Method | Path | Count | Avg Size | Reasons |\n';
-      content += '|------|-------|--------|------|-------|----------|----------|\n';
+      content += '| Rank | Score | Method | Path | Count | Avg Size | Body Rate | Reasons |\n';
+      content += '|------|-------|--------|------|-------|----------|-----------|----------|\n';
       endpoints.forEach((ep, idx) => {
         const reasons = ep.reasons.slice(0, 2).join(', ');
-        content += `| ${idx + 1} | ${formatScore(ep.score)} | ${ep.method} | ${ep.normalizedPath} | ${ep.count} | ${formatBytes(ep.avgSize)} | ${reasons} |\n`;
+        const bodyRate = ep.bodyRate !== undefined ? formatScore(ep.bodyRate) : '';
+        content += `| ${idx + 1} | ${formatScore(ep.score)} | ${ep.method} | ${ep.normalizedPath} | ${ep.count} | ${formatBytes(ep.avgSize)} | ${bodyRate} | ${reasons} |\n`;
       });
       break;
   }

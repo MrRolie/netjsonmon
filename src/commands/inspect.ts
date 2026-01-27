@@ -62,7 +62,12 @@ export async function inspectCommand(captureDir: string, options: InspectCommand
         process.exit(1);
       }
       
-      console.log(renderEndpointDetail(endpoint));
+      const detail = {
+        ...endpoint,
+        schemaVariants: endpoint.distinctSchemas ?? endpoint.schemaHashes?.length ?? 1,
+        statusDistribution: endpoint.statusCounts ?? endpoint.statusDistribution ?? {},
+      };
+      console.log(renderEndpointDetail(detail));
       return;
     }
     
@@ -103,7 +108,7 @@ export async function inspectCommand(captureDir: string, options: InspectCommand
       normalizedPath: ep.normalizedPath,
       count: ep.count,
       avgSize: ep.avgSize,
-      schemaVariants: ep.schemaHashes?.length || 1,
+      schemaVariants: ep.distinctSchemas ?? ep.schemaHashes?.length ?? 1,
       reasons: ep.reasons || [],
     }));
     
