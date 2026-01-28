@@ -2,11 +2,12 @@
  * Label command - manually label endpoints and export training data
  */
 
-import { readFile, writeFile, appendFile, mkdir, readdir } from 'fs/promises';
+import { readFile, writeFile, appendFile, mkdir, readdir, unlink } from 'fs/promises';
 import { createReadStream, existsSync } from 'fs';
 import { basename, join, resolve } from 'path';
 import { createInterface } from 'node:readline';
 import chalk from 'chalk';
+import { createHash } from 'crypto';
 import { generateSummary } from '../summary.js';
 import { formatBytes, formatScore, truncateArray } from '../ui/format.js';
 import { divider } from '../ui/render.js';
@@ -148,6 +149,12 @@ async function labelSingleRun(
   console.log(chalk.gray('Keys: ') + chalk.cyan('[d]ata') + ', ' + chalk.cyan('[n]on-data') + ', ' + chalk.cyan('[u]nsure') + ', ' + chalk.cyan('[s]kip') + ', ' + chalk.cyan('[q]uit'));
   console.log(divider());
 
+  // Materialize inline bodies to temporary files for easier inspection
+  const tempFiles = await materializeInlineBodies(run.path);
+  if (tempFiles.length > 0) {
+    console.log(chalk.gray(`Materialized ${tempFiles.length} inline bodies to bodies/ folder for inspection.`));
+  }
+
   const samples = await loadEndpointSamples(run.path, filtered.map(ep => ep.endpointKey));
 
   if (options.autoNonDataNoBody) {
@@ -208,6 +215,12 @@ async function labelSingleRun(
   }
 
   rl.close();
+
+  // Clean up temporary files
+  if (tempFiles.length > 0) {
+    await cleanupTempFiles(tempFiles);
+    console.log(chalk.gray(`Cleaned up ${tempFiles.length} temporary files.`));
+  }
 
   console.log(divider());
   console.log(chalk.green(`Labeled ${labeledCount} endpoint(s).`));
@@ -468,6 +481,7 @@ async function loadEndpointSamples(runDir: string, endpointKeys: string[]): Prom
         endpointKey?: string;
         inlineBody?: any;
         bodyPath?: string;
+        bodyHash?: string;
         url?: string;
         status?: number;
       };
@@ -477,11 +491,23 @@ async function loadEndpointSamples(runDir: string, endpointKeys: string[]): Prom
       const body = await loadSampleBody(runDir, record.inlineBody, record.bodyPath);
       if (body === undefined) continue;
 
+      // Determine bodyPath: use existing path, or compute path for materialized inline body
+      let resolvedBodyPath: string | undefined;
+      if (record.bodyPath) {
+        resolvedBodyPath = join(runDir, record.bodyPath);
+      } else if (record.inlineBody !== undefined && record.bodyHash) {
+        // Check if materialized file exists
+        const materializedPath = join(runDir, 'bodies', `${record.bodyHash}.json`);
+        if (existsSync(materializedPath)) {
+          resolvedBodyPath = materializedPath;
+        }
+      }
+
       samples.set(record.endpointKey, {
         body,
         url: record.url,
         status: record.status,
-        bodyPath: record.bodyPath ? join(runDir, record.bodyPath) : undefined,
+        bodyPath: resolvedBodyPath,
       });
       needed.delete(record.endpointKey);
     } catch {
@@ -541,6 +567,72 @@ async function loadSampleBody(runDir: string, inlineBody?: any, bodyPath?: strin
   }
 }
 
+/**
+ * Materialize all inline bodies to temporary files in the bodies/ folder
+ * Returns list of file paths created
+ */
+async function materializeInlineBodies(runDir: string): Promise<string[]> {
+  const indexPath = join(runDir, 'index.jsonl');
+  const bodiesDir = join(runDir, 'bodies');
+  
+  if (!existsSync(indexPath)) {
+    return [];
+  }
+
+  await mkdir(bodiesDir, { recursive: true });
+
+  const tempFiles: string[] = [];
+  const stream = createReadStream(indexPath, { encoding: 'utf-8' });
+  const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+  for await (const line of rl) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    try {
+      const record = JSON.parse(trimmed) as {
+        inlineBody?: any;
+        bodyPath?: string;
+        bodyHash?: string;
+      };
+
+      // Only materialize if there's an inline body and no existing bodyPath
+      if (record.inlineBody !== undefined && !record.bodyPath) {
+        // Compute hash from the stringified body
+        const bodyStr = JSON.stringify(record.inlineBody);
+        const hash = record.bodyHash || createHash('sha256').update(bodyStr).digest('hex');
+        
+        const filePath = join(bodiesDir, `${hash}.json`);
+        
+        // Only write if file doesn't already exist
+        if (!existsSync(filePath)) {
+          await writeFile(filePath, JSON.stringify(record.inlineBody, null, 2));
+          tempFiles.push(filePath);
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  rl.close();
+  return tempFiles;
+}
+
+/**
+ * Clean up temporary files created during labeling
+ */
+async function cleanupTempFiles(filePaths: string[]): Promise<void> {
+  for (const filePath of filePaths) {
+    try {
+      if (existsSync(filePath)) {
+        await unlink(filePath);
+      }
+    } catch {
+      // Ignore errors during cleanup
+    }
+  }
+}
 
 async function exportTrainingFromRuns(
   runs: CaptureRunInfo[],
