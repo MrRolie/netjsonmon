@@ -1,0 +1,29 @@
+{
+  "runId": "2026-01-28T19-01-02-456Z-244a300b",
+  "startedAt": "2026-01-28T19:01:02.458Z",
+  "url": "https://datatrack.trendforce.com/",
+  "options": {
+    "url": "https://datatrack.trendforce.com/",
+    "headless": true,
+    "monitorMs": 10000,
+    "timeoutMs": 30000,
+    "outDir": "/Users/Mikael/Documents/Coding Projects/netjsonmon/captures",
+    "maxBodyBytes": 1048576,
+    "inlineBodyBytes": 16384,
+    "maxCaptures": 0,
+    "maxConcurrentCaptures": 6,
+    "captureAllJson": false,
+    "saveHar": false,
+    "trace": false,
+    "consentMode": "auto",
+    "consentAction": "reject",
+    "saveStorageState": false,
+    "disableSummary": false,
+    "outputMode": {
+      "json": false,
+      "quiet": false,
+      "verbose": false,
+      "debug": false
+    }
+  }
+}
