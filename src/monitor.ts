@@ -79,6 +79,7 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
   let context: BrowserContext | undefined;
   let captureCount = 0;
   let duplicateCount = 0;
+  let isClosing = false; // Track if we're shutting down
   const includePattern = options.includeRegex ? new RegExp(options.includeRegex) : null;
   const excludePattern = options.excludeRegex ? new RegExp(options.excludeRegex) : null;
   
@@ -209,8 +210,18 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
 
     // Set up response handler with concurrency control
     page.on('response', (response: Response) => {
+      // Skip processing if we're closing
+      if (isClosing) {
+        return;
+      }
+      
       // Enqueue response handling through limiter
       limiter.run(async () => {
+        // Skip if context closed or we're shutting down
+        if (isClosing || !context) {
+          return 'skipped';
+        }
+        
         try {
           const result = await handleResponse(response, options, store, includePattern, excludePattern, captureCount, seenCaptures);
           if (result === 'captured') {
@@ -230,12 +241,17 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
             lastProgressLog = now;
           }
         } catch (error) {
+          // Silently ignore errors from closed context
+          if (isClosing) {
+            return 'skipped';
+          }
           if (!outputMode.json) {
             console.error('Error handling response:', error);
           }
         }
       }).catch(error => {
-        if (!outputMode.json) {
+        // Silently ignore errors during shutdown
+        if (!isClosing && !outputMode.json) {
           console.error('Limiter error:', error);
         }
       });
@@ -353,52 +369,78 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     ]);
     succeedStage(spinner, 'Monitoring complete');
 
-    // Wait for all in-flight captures to complete (with timeout remaining)
+    // Wait for all in-flight captures to complete (with generous timeout)
     spinner = startStage('Finalizing captures...');
-    if (abortController.signal.aborted) {
-      throw abortController.signal.reason;
+    
+    // Wait for limiter to drain with generous timeout for remaining captures
+    try {
+      const drainTimeoutMs = Math.max(10000, options.timeoutMs - (Date.now() - operationStartTime)); // At least 10 seconds
+      await Promise.race([
+        limiter.drain(),
+        new Promise<void>((_, reject) => {
+          setTimeout(() => reject(new Error('Drain timeout')), drainTimeoutMs);
+        })
+      ]);
+    } catch (error) {
+      // Log but don't fail - we still have the captures we got
+      if (!outputMode.json && outputMode.debug) {
+        console.log(`⚠ Drain operation: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-    // Drain will be interrupted by the main abort handler
-    await Promise.race([
-      limiter.drain(),
-      new Promise<void>((_, reject) => {
-        abortController.signal.addEventListener('abort', () => {
-          reject(abortController.signal.reason);
-        });
-      })
-    ]);
+    
     succeedStage(spinner, `Captured ${chalk.green(captureCount)} responses (${chalk.yellow(duplicateCount)} duplicates skipped)`);
     
     // Stop trace if enabled
     if (options.trace && context) {
-      const tracePath = resolve(options.outDir, runId, 'trace.zip');
-      await context.tracing.stop({ path: tracePath });
-      if (!outputMode.json && !outputMode.quiet) {
-        const fs = await import('fs');
-        const stats = fs.statSync(tracePath);
-        const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-        console.log(chalk.green('✓') + ` Saved trace (${sizeMB} MB)`);
+      spinner = startStage('Stopping trace...');
+      try {
+        const tracePath = resolve(options.outDir, runId, 'trace.zip');
+        await context.tracing.stop({ path: tracePath });
+        if (!outputMode.json && !outputMode.quiet) {
+          const fs = await import('fs');
+          const stats = fs.statSync(tracePath);
+          const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+          console.log(chalk.green('✓') + ` Saved trace (${sizeMB} MB)`);
+        }
+      } catch (error) {
+        if (!outputMode.json && outputMode.debug) {
+          console.log(`⚠ Trace stop error: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
     }
     
-    // Close browser before summary generation (cleanup can take 1-2 seconds)
+    // Mark as closing and close browser before summary generation (cleanup can take 1-2 seconds)
+    isClosing = true;
     spinner = startStage('Closing browser...');
-    if (context) {
-      await context.close().catch(() => {});
-      context = undefined;
+    try {
+      if (context) {
+        await context.close().catch(() => {});
+        context = undefined;
+      }
+      if (browser) {
+        await browser.close().catch(() => {});
+        browser = undefined;
+      }
+      succeedStage(spinner, 'Browser closed');
+    } catch (error) {
+      if (!outputMode.json && outputMode.debug) {
+        console.log(`⚠ Browser close error: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-    if (browser) {
-      await browser.close().catch(() => {});
-      browser = undefined;
-    }
-    succeedStage(spinner, 'Browser closed');
     
-    // Generate summary (unless disabled)
+    // Generate summary (unless disabled) - this always succeeds even if capture had issues
     if (!options.disableSummary) {
       spinner = startStage('Generating endpoint summary...');
-      const runDir = resolve(options.outDir, runId);
-      await generateSummary(runDir, outputMode);
-      spinner?.stop();
+      try {
+        const runDir = resolve(options.outDir, runId);
+        await generateSummary(runDir, outputMode);
+        succeedStage(spinner, 'Summary generated');
+      } catch (error) {
+        if (!outputMode.json) {
+          console.log(`⚠ Summary generation error: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        spinner?.stop();
+      }
     }
     
     return { captureDir };
@@ -448,8 +490,17 @@ async function handleResponse(
     return 'skipped';
   }
 
-  // Get headers
-  const responseHeaders = await response.allHeaders();
+  // Get headers - handle closed context gracefully
+  let responseHeaders: Record<string, string>;
+  try {
+    responseHeaders = await response.allHeaders();
+  } catch (error) {
+    // Context was closed, skip this response
+    if ((error as any)?.message?.includes('closed')) {
+      return 'skipped';
+    }
+    throw error;
+  }
   const contentType = responseHeaders['content-type'] || '';
   const contentLength = responseHeaders['content-length'];
 
