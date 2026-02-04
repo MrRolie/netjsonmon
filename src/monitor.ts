@@ -133,13 +133,24 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
   }, options.timeoutMs);
 
   try {
-    // Launch browser
-    browser = await withTimeout(chromium.launch({ headless: options.headless }), options.timeoutMs, 'Browser launch');
+    // Launch browser with stealth options to avoid bot detection
+    browser = await withTimeout(chromium.launch({ 
+      headless: options.headless,
+      args: [
+        '--disable-blink-features=AutomationControlled', // Hide automation
+        '--disable-features=IsolateOrigins,site-per-process', // Reduce fingerprinting
+      ],
+    }), options.timeoutMs, 'Browser launch');
     succeedStage(spinner, 'Browser launched');
     
     // Create context with optional HAR recording and storage state
     const contextOptions: any = {
       userAgent: options.userAgent,
+      // Additional stealth settings
+      viewport: { width: 1920, height: 1080 }, // Normal desktop viewport
+      locale: 'en-US',
+      timezoneId: 'America/New_York',
+      permissions: [],
     };
     
     if (options.storageState) {
@@ -155,6 +166,36 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
 
     context = await withTimeout(browser.newContext(contextOptions), options.timeoutMs, 'Browser context creation');
     const page = await withTimeout(context.newPage(), options.timeoutMs, 'Page creation');
+
+    // Inject stealth scripts to avoid bot detection
+    await page.addInitScript(() => {
+      // Remove webdriver property
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+      
+      // Override plugins to appear more like a real browser
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [
+          { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+          { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: 'Portable Document Format' },
+          { name: 'Native Client', filename: 'internal-nacl-plugin', description: 'Native Client Executable' },
+        ],
+      });
+      
+      // Override chrome property
+      (window as any).chrome = {
+        runtime: {},
+      };
+      
+      // Override permissions
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters: any) => (
+        parameters.name === 'notifications'
+          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
+          : originalQuery(parameters)
+      );
+    });
 
     // Start trace if requested
     if (options.trace) {
@@ -215,9 +256,13 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     ]);
     succeedStage(spinner, 'Navigation complete');
 
+    // Wait a moment for any Cloudflare challenges or interstitials to appear
+    await page.waitForTimeout(1500);
+
     // Handle interstitial pages (consent, privacy, etc.)
+    // Always check for Cloudflare challenges regardless of consentMode
     if (options.consentMode !== 'off') {
-      spinner = startStage('Checking for interstitials...');
+      spinner = startStage('Checking for interstitials and challenges...');
       const handled = await handleConsent(
         page,
         options.consentMode,
@@ -226,12 +271,27 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
         options.consentHandlers
       );
       if (handled) {
-        if (spinner) spinner.text = 'Handled interstitial, waiting for page...';
+        if (spinner) spinner.text = 'Handled interstitial/challenge, waiting for page...';
         // Wait for navigation to complete after dismissing interstitial
         await page.waitForLoadState('domcontentloaded', { timeout: options.timeoutMs });
-        succeedStage(spinner, 'Interstitial handled');
+        succeedStage(spinner, 'Interstitial/challenge handled');
       } else {
-        infoStage(spinner, 'No interstitials detected');
+        infoStage(spinner, 'No interstitials or challenges detected');
+      }
+    } else {
+      // Even with consent mode off, check for Cloudflare challenges
+      spinner = startStage('Checking for Cloudflare challenges...');
+      const handled = await handleConsent(
+        page,
+        'auto', // Use auto mode just for Cloudflare
+        options.consentAction,
+        options.timeoutMs,
+        ['cloudflare'] // Only check Cloudflare handler
+      );
+      if (handled) {
+        succeedStage(spinner, 'Cloudflare challenge handled');
+      } else {
+        infoStage(spinner, 'No Cloudflare challenge detected');
       }
     }
 

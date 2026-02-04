@@ -174,7 +174,96 @@ export const genericConsentHandler: ConsentHandler = {
   },
 };
 
+/**
+ * Cloudflare challenge handler
+ */
+export const cloudflareHandler: ConsentHandler = {
+  name: 'cloudflare',
+  match: async (frame: Frame) => {
+    // Check if URL contains Cloudflare challenge indicators
+    if (urlIncludes(frame, '/cdn-cgi/challenge-platform', 'challenges.cloudflare.com')) {
+      return true;
+    }
+    
+    // Check page content for Cloudflare challenge indicators
+    try {
+      const page = frame.page();
+      const challengePresent = await page.evaluate(() => {
+        // Look for Cloudflare challenge elements
+        const body = document.body;
+        if (!body) return false;
+        
+        const bodyText = body.textContent || '';
+        const bodyHtml = body.innerHTML || '';
+        
+        // Check for common Cloudflare challenge indicators
+        return (
+          bodyText.includes('Checking your browser') ||
+          bodyText.includes('Please wait') ||
+          bodyHtml.includes('cdn-cgi/challenge-platform') ||
+          bodyHtml.includes('cf-challenge') ||
+          document.getElementById('challenge-running') !== null ||
+          document.querySelector('[data-ray]') !== null
+        );
+      });
+      return challengePresent;
+    } catch {
+      return false;
+    }
+  },
+  handle: async (frame, action, timeoutMs) => {
+    // Cloudflare challenges are automatically solved by the browser
+    // We just need to wait for the challenge to complete
+    const page = frame.page();
+    console.log('⏳ Detected Cloudflare challenge, waiting for completion...');
+    
+    // Wait a moment for the challenge to start
+    await page.waitForTimeout(1000);
+    
+    // Wait for the challenge to complete by checking if challenge elements disappear
+    try {
+      await page.waitForFunction(
+        () => {
+          const body = document.body;
+          if (!body) return false;
+          
+          const bodyText = body.textContent || '';
+          const bodyHtml = body.innerHTML || '';
+          
+          // Challenge is complete when these indicators are gone
+          return (
+            !bodyText.includes('Checking your browser') &&
+            !bodyText.includes('Please wait') &&
+            !bodyHtml.includes('cf-challenge') &&
+            !document.getElementById('challenge-running')
+          );
+        },
+        { timeout: timeoutMs }
+      );
+      
+      // Give it another moment to stabilize
+      await page.waitForTimeout(1000);
+      console.log('✓ Cloudflare challenge completed');
+      return true;
+    } catch (error) {
+      // Also try waiting for URL change
+      try {
+        await page.waitForURL(
+          (url) => !url.href.includes('/cdn-cgi/challenge-platform'),
+          { timeout: 5000 }
+        );
+        console.log('✓ Cloudflare challenge completed');
+        return true;
+      } catch {
+        console.log('⚠ Cloudflare challenge wait timeout, continuing...');
+        return false;
+      }
+    }
+  },
+};
+
 const HANDLER_REGISTRY: ConsentHandler[] = [
+  cloudflareHandler,
   yahooConsentHandler,
   oneTrustHandler,
   sourcePointHandler,
