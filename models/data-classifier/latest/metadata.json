@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "trainedAt": "2026-02-04T07:53:19.163912Z",
+  "trainedAt": "2026-02-04T08:46:35.628830Z",
   "modelType": "logistic_regression",
   "hyperparameters": {
     "class_weight": "balanced",
@@ -64,6 +64,7 @@
       "hasDataFlags",
       "method"
     ],
-    "n_features": 16
+    "n_features": 16,
+    "tfidf_features": []
   }
 }

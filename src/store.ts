@@ -26,6 +26,8 @@ export class CaptureStore {
    */
   async init(): Promise<void> {
     await mkdir(this.bodiesDir, { recursive: true });
+    // Ensure index.jsonl exists so summary generation doesn't fail on empty runs
+    await writeFile(this.indexPath, '', { flag: 'a' });
   }
 
   /**

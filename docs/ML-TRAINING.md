@@ -107,6 +107,24 @@ The train command automatically finds training data in these formats:
 
 The command finds and uses **all** available training data automatically.
 
+## Feature Set
+
+### Base Features
+- **Frequency**: Endpoint call count and rates
+- **Payload Size**: Average and max payload sizes
+- **Structure**: Array structures, data flags, schema stability
+- **Depth**: JSON nesting depth analysis
+
+### Enhanced Features (Phase 2)
+- **TF-IDF on Path Tokens**: Extracts tokens from URL paths (e.g., "users", "api", "data") and computes TF-IDF scores. Identifies data-related patterns in endpoint paths.
+- **TF-IDF on Sample Key Paths**: Analyzes JSON response keys (e.g., "user.email", "items[0].id") and computes TF-IDF scores. Captures data schema patterns.
+
+These TF-IDF features are automatically extracted during training from:
+- **pathTokens**: Path segments from normalized endpoint URLs
+- **sampleKeyPaths**: JSON object paths from response bodies
+
+Top 20 features from each TF-IDF category are selected and included in the trained model.
+
 ## Model Files
 
 After training, the model is saved to:
@@ -116,7 +134,7 @@ models/data-classifier/latest/
 ├── scaler.json             # Feature scaling parameters
 ├── encoder.json            # One-hot encoding categories
 ├── feature_schema.json     # Feature names and types
-└── metadata.json           # Training metrics and info
+└── metadata.json           # Training metrics and TF-IDF info
 ```
 
 These files are automatically loaded during captures when ML predictions are used.
@@ -224,3 +242,4 @@ netjsonmon train   # Use anywhere
 | Label data | `npm run dev label` | `node dist/index.js label` | `netjsonmon label` |
 
 All three methods support the same arguments and options.
+

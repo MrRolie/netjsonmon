@@ -61,12 +61,120 @@ def load_training_data(input_paths: List[str]) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-def extract_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
+def extract_tfidf_features(df: pd.DataFrame, top_n: int = 20) -> Tuple[pd.DataFrame, List[str], Dict[str, Any]]:
+    """
+    Compute TF-IDF features from pathTokens and sampleKeyPaths.
+    
+    Returns:
+        (tfidf_df, tfidf_features_list, tfidf_metadata): DataFrame with TF-IDF columns, feature names, and metadata
+    """
+    # Initialize dictionaries to store TF and document frequency
+    path_token_tf = {}
+    path_token_df = {}
+    key_path_tf = {}
+    key_path_df = {}
+    
+    n_docs = len(df)
+    
+    # First pass: collect TF and DF for path tokens and key paths
+    for _, row in df.iterrows():
+        path_tokens = row.get('pathTokens', [])
+        sample_key_paths = row.get('sampleKeyPaths', [])
+        
+        # Process path tokens
+        for token in path_tokens:
+            token = str(token).lower()
+            path_token_tf[token] = path_token_tf.get(token, 0) + 1
+        
+        # Track unique tokens per document for DF
+        for token in set(token.lower() for token in path_tokens):
+            path_token_df[token] = path_token_df.get(token, 0) + 1
+        
+        # Process key paths
+        for key_path in sample_key_paths:
+            key_path_str = str(key_path)
+            key_path_tf[key_path_str] = key_path_tf.get(key_path_str, 0) + 1
+        
+        # Track unique paths per document for DF
+        for key_path in set(str(kp) for kp in sample_key_paths):
+            key_path_df[key_path] = key_path_df.get(key_path, 0) + 1
+    
+    # Compute TF-IDF scores
+    path_token_tfidf = {}
+    for token, tf in path_token_tf.items():
+        idf = np.log(n_docs / (path_token_df.get(token, 1) + 1e-10))
+        path_token_tfidf[token] = (tf / (sum(path_token_tf.values()) + 1e-10)) * idf
+    
+    key_path_tfidf = {}
+    for path, tf in key_path_tf.items():
+        idf = np.log(n_docs / (key_path_df.get(path, 1) + 1e-10))
+        key_path_tfidf[path] = (tf / (sum(key_path_tf.values()) + 1e-10)) * idf
+    
+    # Get top N features
+    top_tokens = sorted(path_token_tfidf.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    top_paths = sorted(key_path_tfidf.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    
+    token_names = [t[0] for t in top_tokens]
+    path_names = [p[0] for p in top_paths]
+    
+    # Create feature columns for each row
+    tfidf_data = {}
+    
+    # Add token TF-IDF features
+    for token in token_names:
+        tfidf_data[f'tfidf_token_{token}'] = []
+    
+    # Add path TF-IDF features
+    for path in path_names:
+        tfidf_data[f'tfidf_path_{path}'] = []
+    
+    # Second pass: compute TF-IDF for each document
+    for _, row in df.iterrows():
+        path_tokens = row.get('pathTokens', [])
+        sample_key_paths = row.get('sampleKeyPaths', [])
+        
+        token_tf = {}
+        for token in path_tokens:
+            token = str(token).lower()
+            token_tf[token] = token_tf.get(token, 0) + 1
+        
+        path_tf = {}
+        for path in sample_key_paths:
+            path_str = str(path)
+            path_tf[path_str] = path_tf.get(path_str, 0) + 1
+        
+        # Add token TF-IDF values
+        for token in token_names:
+            tf = token_tf.get(token, 0)
+            idf = np.log(n_docs / (path_token_df.get(token, 1) + 1e-10))
+            tfidf_data[f'tfidf_token_{token}'].append((tf / (sum(token_tf.values()) + 1e-10)) * idf)
+        
+        # Add path TF-IDF values
+        for path in path_names:
+            tf = path_tf.get(path, 0)
+            idf = np.log(n_docs / (key_path_df.get(path, 1) + 1e-10))
+            tfidf_data[f'tfidf_path_{path}'].append((tf / (sum(path_tf.values()) + 1e-10)) * idf)
+    
+    tfidf_df = pd.DataFrame(tfidf_data, index=df.index)
+    tfidf_feature_names = list(tfidf_df.columns)
+    
+    # Store metadata for inference
+    tfidf_metadata = {
+        'token_names': token_names,
+        'path_names': path_names,
+        'token_tfidf_scores': {t: float(s) for t, s in top_tokens},
+        'path_tfidf_scores': {p: float(s) for p, s in top_paths},
+    }
+    
+    return tfidf_df, tfidf_feature_names, tfidf_metadata
+
+
+def extract_features(df: pd.DataFrame, include_tfidf: bool = True) -> Tuple[pd.DataFrame, List[str], Dict[str, Any]]:
     """
     Extract features from training data.
 
     Returns:
-        (features_df, feature_names): DataFrame with feature columns and list of feature names
+        (features_df, feature_names, metadata): DataFrame with feature columns, list of feature names, and metadata
     """
     # Extract nested features dict into columns
     features_df = pd.json_normalize(df['features'])
@@ -112,11 +220,19 @@ def extract_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
     else:
         features_df['method'] = 'GET'
 
-    # Select only the features we want
+    # Select base features
     selected_features = numerical_features + boolean_features + ['method']
-    features_df = features_df[selected_features]
-
-    return features_df, selected_features
+    features_df = features_df[selected_features].copy()
+    
+    # Extract TF-IDF features if available
+    metadata = {}
+    if include_tfidf and 'pathTokens' in df.columns and 'sampleKeyPaths' in df.columns:
+        tfidf_df, tfidf_features, tfidf_metadata = extract_tfidf_features(df, top_n=20)
+        features_df = pd.concat([features_df, tfidf_df], axis=1)
+        selected_features.extend(tfidf_features)
+        metadata['tfidf'] = tfidf_metadata
+    
+    return features_df, selected_features, metadata
 
 
 def prepare_labels(df: pd.DataFrame) -> Tuple[np.ndarray, List[str]]:
@@ -179,12 +295,12 @@ def create_pipeline(feature_names: List[str]) -> Pipeline:
     return pipeline
 
 
-def train_model(X: pd.DataFrame, y: np.ndarray, feature_names: List[str], verbose: bool = False) -> Tuple[Pipeline, Dict[str, Any], StandardScaler, OneHotEncoder]:
+def train_model(X: pd.DataFrame, y: np.ndarray, feature_names: List[str], verbose: bool = False) -> Tuple[Any, Dict[str, Any], StandardScaler, OneHotEncoder]:
     """
     Train the model with cross-validation.
 
     Returns:
-        (trained_pipeline, metrics, scaler, encoder): Trained pipeline, evaluation metrics, and preprocessing objects
+        (trained_model, metrics, scaler, encoder): Trained model, evaluation metrics, and preprocessing objects
     """
     # Split data: 80% train, 20% test (stratified to preserve class distribution)
     X_train, X_test, y_train, y_test = train_test_split(
@@ -196,7 +312,7 @@ def train_model(X: pd.DataFrame, y: np.ndarray, feature_names: List[str], verbos
     print(f"  Test: {len(X_test)} examples")
 
     # Manually preprocess for better ONNX compatibility
-    # Separate numerical and categorical features
+    # Separate numerical/TFIDF and categorical features
     numerical_features = [f for f in feature_names if f != 'method']
     categorical_features = ['method']
 
@@ -346,18 +462,19 @@ def save_metadata(
     metrics: Dict[str, Any],
     output_dir: Path,
     input_paths: List[str],
-    class_distribution: Dict[str, int]
+    class_distribution: Dict[str, int],
+    tfidf_metadata: Dict[str, Any] | None = None
 ):
     """Save model metadata including feature schema and training metrics."""
-    # Get preprocessor details
-    # Note: We need the actual categories used in training
-
     # Feature schema
+    numerical_features = [f for f in feature_names if f != 'method']
+    
     feature_schema = {
-        'numerical_features': [f for f in feature_names if f != 'method'],
+        'numerical_features': numerical_features,
         'categorical_features': ['method'],
         'all_features': feature_names,
         'n_features': len(feature_names),
+        'tfidf_features': list(f for f in feature_names if f.startswith('tfidf_')),
     }
 
     schema_path = output_dir / 'feature_schema.json'
@@ -394,6 +511,10 @@ def save_metadata(
         },
         'features': feature_schema,
     }
+    
+    # Add TF-IDF metadata if available
+    if tfidf_metadata:
+        metadata['tfidf'] = tfidf_metadata
 
     metadata_path = output_dir / 'metadata.json'
     with open(metadata_path, 'w') as f:
@@ -465,8 +586,8 @@ def main():
     # Prepare labels (filter out 'unsure')
     labels, valid_indices = prepare_labels(df)
 
-    # Extract features
-    features_df, feature_names = extract_features(df.iloc[valid_indices])
+    # Extract features (including TF-IDF)
+    features_df, feature_names, feature_metadata = extract_features(df.iloc[valid_indices])
 
     # Class distribution for metadata
     class_distribution = {
@@ -483,8 +604,15 @@ def main():
     # Save scaler and encoder parameters
     save_scaler_params(scaler, encoder, output_dir)
 
-    # Save metadata
-    save_metadata(feature_names, metrics, output_dir, args.input, class_distribution)
+    # Save metadata (including TF-IDF)
+    save_metadata(
+        feature_names, 
+        metrics, 
+        output_dir, 
+        args.input, 
+        class_distribution,
+        tfidf_metadata=feature_metadata.get('tfidf')
+    )
 
     print(f"\n{'=' * 60}")
     print(f"Training complete!")

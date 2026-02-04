@@ -36,6 +36,15 @@ export interface Features {
   schemaHash: string;        // Hash of top-level keys (sorted) for tracking schema changes
 }
 
+/**
+ * TF-IDF features for ML training
+ * Computed at the aggregate level from all samples
+ */
+export interface TfIdfFeatures {
+  pathTokenTfidf: Record<string, number>;     // Token -> TF-IDF score (e.g., "users" -> 0.75)
+  keyPathTfidf: Record<string, number>;       // KeyPath -> TF-IDF score (e.g., "user.email" -> 0.82)
+}
+
 const MAX_DEPTH_DEFAULT = 3;
 const MAX_KEYS_DEFAULT = 50;
 const MAX_SAMPLE_PATHS_DEFAULT = 100;
@@ -234,4 +243,134 @@ function extractPaths(
 
   visited.delete(obj);
   return paths;
+}
+/**
+ * Compute TF-IDF features for a collection of endpoints
+ * Used during aggregate feature computation for ML training
+ * 
+ * @param endpoints - Array of endpoint aggregates with sampleKeyPaths and pathTokens
+ * @returns TF-IDF feature vectors
+ */
+export function computeTfIdfFeatures(
+  endpoints: Array<{
+    sampleKeyPaths?: string[];
+    pathTokens?: string[];
+  }>
+): TfIdfFeatures {
+  const pathTokenTfidf: Record<string, number> = {};
+  const keyPathTfidf: Record<string, number> = {};
+
+  if (endpoints.length === 0) {
+    return { pathTokenTfidf, keyPathTfidf };
+  }
+
+  // ============ Path Tokens TF-IDF ============
+  // Collect all path tokens (split by '/')
+  const allTokens: string[] = [];
+  const docFreqTokens = new Map<string, number>();
+
+  for (const endpoint of endpoints) {
+    const tokens = endpoint.pathTokens ?? [];
+    const uniqueTokens = new Set(tokens);
+    
+    for (const token of tokens) {
+      allTokens.push(token.toLowerCase());
+    }
+    
+    uniqueTokens.forEach((token) => {
+      const lowerToken = token.toLowerCase();
+      docFreqTokens.set(lowerToken, (docFreqTokens.get(lowerToken) ?? 0) + 1);
+    });
+  }
+
+  // Compute TF-IDF for tokens
+  const tokenTf = new Map<string, number>();
+  for (const token of allTokens) {
+    tokenTf.set(token, (tokenTf.get(token) ?? 0) + 1);
+  }
+
+  const totalTokens = allTokens.length;
+  const docsWithTokens = endpoints.length;
+
+  tokenTf.forEach((tf, token) => {
+    const termFreq = tf / (totalTokens || 1);
+    const docFreq = docFreqTokens.get(token) ?? 1;
+    const inverseDocFreq = Math.log(docsWithTokens / (docFreq || 1));
+    pathTokenTfidf[token] = Number((termFreq * inverseDocFreq).toFixed(4));
+  });
+
+  // ============ Key Path TF-IDF ============
+  // Collect all key paths (e.g., "user.email")
+  const allKeyPaths: string[] = [];
+  const docFreqKeyPaths = new Map<string, number>();
+
+  for (const endpoint of endpoints) {
+    const paths = endpoint.sampleKeyPaths ?? [];
+    const uniquePaths = new Set(paths);
+    
+    for (const path of paths) {
+      allKeyPaths.push(path);
+    }
+    
+    uniquePaths.forEach((path) => {
+      docFreqKeyPaths.set(path, (docFreqKeyPaths.get(path) ?? 0) + 1);
+    });
+  }
+
+  // Compute TF-IDF for key paths
+  const keyPathTf = new Map<string, number>();
+  for (const path of allKeyPaths) {
+    keyPathTf.set(path, (keyPathTf.get(path) ?? 0) + 1);
+  }
+
+  const totalKeyPaths = allKeyPaths.length;
+
+  keyPathTf.forEach((tf, path) => {
+    const termFreq = tf / (totalKeyPaths || 1);
+    const docFreq = docFreqKeyPaths.get(path) ?? 1;
+    const inverseDocFreq = Math.log(docsWithTokens / (docFreq || 1));
+    keyPathTfidf[path] = Number((termFreq * inverseDocFreq).toFixed(4));
+  });
+
+  return { pathTokenTfidf, keyPathTfidf };
+}
+
+/**
+ * Flatten TF-IDF feature vectors into a vector of values
+ * for use in machine learning pipelines
+ * 
+ * @param tfidf - TF-IDF features
+ * @param topN - Number of top features to keep per type (default: 50)
+ * @returns { tokens: number[], paths: number[], tokenNames: string[], pathNames: string[] }
+ */
+export function flattenTfIdfFeatures(
+  tfidf: TfIdfFeatures,
+  topN: number = 50
+): {
+  tokenVector: number[];
+  pathVector: number[];
+  tokenNames: string[];
+  pathNames: string[];
+} {
+  // Sort and take top N tokens by TF-IDF score
+  const topTokens = Object.entries(tfidf.pathTokenTfidf)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, topN);
+
+  const topPaths = Object.entries(tfidf.keyPathTfidf)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, topN);
+
+  const tokenNames = topTokens.map(([name]) => name);
+  const pathNames = topPaths.map(([name]) => name);
+
+  const tokenVector = topTokens.map(([, value]) => value);
+  const pathVector = topPaths.map(([, value]) => value);
+
+  return {
+    tokenVector,
+    pathVector,
+    tokenNames,
+    pathNames,
+  };
 }
