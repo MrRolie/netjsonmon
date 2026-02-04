@@ -1,0 +1,41 @@
+{
+  "numerical_features": [
+    "score",
+    "count",
+    "avgSize",
+    "maxSize",
+    "distinctSchemas",
+    "bodyAvailableCount",
+    "jsonParseSuccessCount",
+    "noBodyCount",
+    "bodyAvailableRate",
+    "bodyRate",
+    "bodyEvidenceFactor",
+    "avgDepth",
+    "hostCount",
+    "hasArrayStructure",
+    "hasDataFlags"
+  ],
+  "categorical_features": [
+    "method"
+  ],
+  "all_features": [
+    "score",
+    "count",
+    "avgSize",
+    "maxSize",
+    "distinctSchemas",
+    "bodyAvailableCount",
+    "jsonParseSuccessCount",
+    "noBodyCount",
+    "bodyAvailableRate",
+    "bodyRate",
+    "bodyEvidenceFactor",
+    "avgDepth",
+    "hostCount",
+    "hasArrayStructure",
+    "hasDataFlags",
+    "method"
+  ],
+  "n_features": 16
+}

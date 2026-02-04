@@ -1,0 +1,12 @@
+{
+  "categories": [
+    [
+      "GET",
+      "POST"
+    ]
+  ],
+  "feature_names": [
+    "method_GET",
+    "method_POST"
+  ]
+}

@@ -83,3 +83,4 @@ Thumbs.db
 # Development docs
 # =========================
 docs/archive/
+.claude/

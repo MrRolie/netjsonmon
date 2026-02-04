@@ -1,6 +1,6 @@
 /**
  * Endpoint aggregation and summary generation
- * 
+ *
  * Reads index.jsonl, aggregates by endpointKey, scores endpoints,
  * and generates summary.json, endpoints.jsonl, and terminal output.
  */
@@ -21,6 +21,7 @@ import {
 } from './score.js';
 import { renderEndpointsTable, renderNextActions, outputJSON, divider, type EndpointSummary, type OutputMode } from './ui/render.js';
 import { formatNumber } from './ui/format.js';
+import { tryLoadMLPredictor } from './ml/predictor.js';
 
 /**
  * Generate summary files from a completed capture run.
@@ -71,12 +72,50 @@ export async function generateSummary(runDir: string, outputMode?: OutputMode): 
     return;
   }
   
-  // Score all endpoints
-  const scored = Array.from(aggregates.values()).map(agg => 
+  // Score all endpoints with heuristic
+  const scored = Array.from(aggregates.values()).map(agg =>
     scoreEndpoint(agg, totalCaptures)
   );
-  
-  // Sort by score descending
+
+  // Try to load ML predictor and enhance scores
+  let usedML = false;
+  const mlModelPath = './models/data-classifier/latest';
+  const mlPredictor = await tryLoadMLPredictor(mlModelPath);
+
+  if (mlPredictor && mlPredictor.isLoaded()) {
+    if (!mode.json && !mode.quiet) {
+      console.log(chalk.cyan('ℹ') + ' Using ML classifier for endpoint scoring');
+    }
+
+    try {
+      // Predict all endpoints
+      const predictions = await mlPredictor.predictBatch(scored);
+
+      // Enhance scored endpoints with ML predictions
+      for (let i = 0; i < scored.length; i++) {
+        const endpoint = scored[i];
+        const prediction = predictions[i];
+
+        // Store heuristic score
+        (endpoint as any).heuristicScore = endpoint.score;
+
+        // Replace score with ML probability
+        endpoint.score = prediction.probability;
+
+        // Add ML metadata
+        (endpoint as any).mlScore = prediction.probability;
+        (endpoint as any).mlLabel = prediction.label;
+        (endpoint as any).mlConfidence = prediction.confidence;
+        (endpoint as any).usedML = true;
+      }
+
+      usedML = true;
+    } catch (err) {
+      console.error(chalk.yellow('Warning: ML prediction failed, falling back to heuristic scoring:'), err);
+    }
+  }
+
+  // Sort by score descending (now using ML score if available)
   const sortedEndpoints = sortByScore(scored);
   
   // Generate outputs
@@ -248,8 +287,8 @@ function writeSummaryJson(
     const parts = ep.endpointKey.split(' ');
     const method = parts.length > 1 ? parts[0] : 'GET';
     const normalizedPath = parts.length > 1 ? parts.slice(1).join(' ') : ep.endpointKey;
-    
-    return {
+
+    const base = {
       endpointKey: ep.endpointKey,
       method,
       normalizedPath,
@@ -273,6 +312,21 @@ function writeSummaryJson(
       firstSeen: ep.firstSeen,
       lastSeen: ep.lastSeen,
     };
+
+    // Add ML fields if present
+    const epAny = ep as any;
+    if (epAny.usedML) {
+      return {
+        ...base,
+        heuristicScore: parseFloat(epAny.heuristicScore.toFixed(3)),
+        mlScore: parseFloat(epAny.mlScore.toFixed(3)),
+        mlLabel: epAny.mlLabel,
+        mlConfidence: parseFloat(epAny.mlConfidence.toFixed(3)),
+        usedML: true,
+      };
+    }
+
+    return base;
   });
   
   const summary = {
@@ -308,8 +362,8 @@ function writeEndpointsJsonl(runDir: string, endpoints: ScoredEndpoint[], mode: 
     const parts = ep.endpointKey.split(' ');
     const method = parts.length > 1 ? parts[0] : 'GET';
     const normalizedPath = parts.length > 1 ? parts.slice(1).join(' ') : ep.endpointKey;
-    
-    return JSON.stringify({
+
+    const base = {
       endpointKey: ep.endpointKey,
       method,
       normalizedPath,
@@ -334,7 +388,22 @@ function writeEndpointsJsonl(runDir: string, endpoints: ScoredEndpoint[], mode: 
       hasArrayStructure: ep.hasArrayStructure,
       hasDataFlags: ep.hasDataFlags,
       avgDepth: parseFloat(ep.avgDepth.toFixed(2)),
-    });
+    };
+
+    // Add ML fields if present
+    const epAny = ep as any;
+    if (epAny.usedML) {
+      return JSON.stringify({
+        ...base,
+        heuristicScore: parseFloat(epAny.heuristicScore.toFixed(3)),
+        mlScore: parseFloat(epAny.mlScore.toFixed(3)),
+        mlLabel: epAny.mlLabel,
+        mlConfidence: parseFloat(epAny.mlConfidence.toFixed(3)),
+        usedML: true,
+      });
+    }
+
+    return JSON.stringify(base);
   });
   
   writeFileSync(endpointsPath, lines.join('\n') + '\n', 'utf-8');

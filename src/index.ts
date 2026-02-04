@@ -12,6 +12,7 @@ import { initCommand } from './commands/init.js';
 import { inspectCommand } from './commands/inspect.js';
 import { endpointsCommand } from './commands/endpoints.js';
 import { labelCommand } from './commands/label.js';
+import { trainCommand } from './commands/train.js';
 
 const program = new Command();
 
@@ -139,6 +140,23 @@ program
       // Auto-detect training-captures if no captureDir provided
       const targetDir = captureDir || './training-captures';
       await labelCommand(targetDir, options);
+    } catch (error) {
+      console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// Train command (train ML classifier)
+program
+  .command('train [captureDir]')
+  .description('Train ML classifier on labeled endpoints')
+  .option('--out <dir>', 'Output directory for model', './models/data-classifier/latest')
+  .option('--verbose', 'Show detailed training progress')
+  .action(async (captureDir: string | undefined, options: any) => {
+    try {
+      // Auto-detect training-captures if no captureDir provided
+      const targetDir = captureDir || './training-captures';
+      await trainCommand(targetDir, options);
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
       process.exit(1);
