@@ -125,7 +125,7 @@ program
 
 // Label command (manual labeling + training export)
 program
-  .command('label <captureDir>')
+  .command('label [captureDir]')
   .description('Manually label endpoints and export training data')
   .option('--minScore <score>', 'Minimum score threshold (0-1)')
   .option('--maxScore <score>', 'Maximum score threshold (0-1)')
@@ -134,9 +134,11 @@ program
   .option('--autoNonDataNoBody', 'Auto-label endpoints without bodies as non-data', false)
   .option('--export', 'Export training.jsonl from existing labels', false)
   .option('--out <filename>', 'Output filename for training export')
-  .action(async (captureDir: string, options: any) => {
+  .action(async (captureDir: string | undefined, options: any) => {
     try {
-      await labelCommand(captureDir, options);
+      // Auto-detect training-captures if no captureDir provided
+      const targetDir = captureDir || './training-captures';
+      await labelCommand(targetDir, options);
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
       process.exit(1);
