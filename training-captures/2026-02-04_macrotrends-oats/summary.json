@@ -1,0 +1,1081 @@
+{
+  "runId": "2026-02-04T18-00-57-463Z-3137dcc5",
+  "url": "https://www.macrotrends.net/2536/oats-prices-historical-chart-data",
+  "startedAt": "2026-02-04T18:00:57.465Z",
+  "completedAt": "2026-02-04T18:09:58.806Z",
+  "captureDir": "C:\\Users\\mikae\\Coding_Projects\\netjsonmon\\training-captures\\2026-02-04_macrotrends-oats",
+  "totalResponses": 256,
+  "jsonCaptures": 256,
+  "duplicatesSkipped": 0,
+  "redactionsApplied": 0,
+  "truncatedBodies": 102,
+  "totalEndpoints": 136,
+  "scoringWeights": {
+    "frequency": 0.3,
+    "payloadSize": 0.3,
+    "structure": 0.2,
+    "stability": 0.2
+  },
+  "bodyEvidence": {
+    "scale": 1.5,
+    "minFactor": 0.05
+  },
+  "endpoints": [
+    {
+      "endpointKey": "GET /economic-data/:id/INDEXDAILY",
+      "method": "GET",
+      "normalizedPath": "/economic-data/:id/INDEXDAILY",
+      "score": 0.703,
+      "count": 1,
+      "avgSize": 302020,
+      "maxSize": 302020,
+      "schemaHashes": [
+        "6ed6c8d55616f85a2a1fe4b19a286bd895296d5bf543248a9e5e4ac52d953eed"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "www.macrotrends.net"
+      ],
+      "bodyAvailableCount": 1,
+      "jsonParseSuccessCount": 1,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "large average payload (294.9KB)",
+        "has data-likeness flags (id/items/results/data)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (1/1, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "data",
+        "metadata.lineWidth",
+        "metadata.name",
+        "metadata.tableHeaderName",
+        "metadata.positiveColor",
+        "metadata.negativeColor",
+        "metadata.tooltipDateFormat",
+        "metadata.chartType",
+        "metadata.mobileChartType",
+        "metadata.currency",
+        "metadata.label"
+      ],
+      "firstSeen": "2026-02-04T18:01:00.810Z",
+      "lastSeen": "2026-02-04T18:01:00.810Z",
+      "heuristicScore": 0.604,
+      "mlScore": 0.703,
+      "mlLabel": "data",
+      "mlConfidence": 0.703,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /a/api/fastlane.json",
+      "method": "GET",
+      "normalizedPath": "/a/api/fastlane.json",
+      "score": 0.697,
+      "count": 4,
+      "avgSize": 615,
+      "maxSize": 767,
+      "schemaHashes": [
+        "5fe3b621777ea5473060f48e11c98b4a27f3429719f0874659d6d5b1002f2f92",
+        "2a6259d1337faad58360ff1980176846fd7e0d302b297d6b2048aaf3d7b68a16",
+        "fd1ddfbb306b38ca6359425c28ca2c003d44c5578cd45767750d160b68939377"
+      ],
+      "statusCounts": {
+        "200": 4
+      },
+      "statusDistribution": {
+        "200": 4
+      },
+      "distinctSchemas": 3,
+      "hosts": [
+        "fastlane.rubiconproject.com"
+      ],
+      "bodyAvailableCount": 4,
+      "jsonParseSuccessCount": 4,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (4 captures)",
+        "small average payload (615 bytes)",
+        "mostly stable schema (3 variants)",
+        "deeply nested structure (avg depth: 2.5)",
+        "strong JSON body evidence (4/4, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "status",
+        "reason",
+        "error_code",
+        "account_id",
+        "site_id",
+        "zone_id",
+        "tracking",
+        "inventory.placement",
+        "inventory.pbadslot",
+        "inventory.page",
+        "inventory.divId",
+        "inventory.domain",
+        "inventory.documentLang",
+        "ads[0].status",
+        "ads[0].reason",
+        "ads[0].error_code",
+        "ads[0].impression_id",
+        "size_id",
+        "alt_size_ids"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.130Z",
+      "lastSeen": "2026-02-04T18:01:34.124Z",
+      "heuristicScore": 0.153,
+      "mlScore": 0.697,
+      "mlLabel": "data",
+      "mlConfidence": 0.697,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /cgi-bin/context.pl",
+      "method": "GET",
+      "normalizedPath": "/cgi-bin/context.pl",
+      "score": 0.472,
+      "count": 3,
+      "avgSize": 479,
+      "maxSize": 502,
+      "schemaHashes": [
+        "4e32fb4562872eaf620a232e5f29cf94ec138cb5dd136b39db5d4b507649904b"
+      ],
+      "statusCounts": {
+        "200": 3
+      },
+      "statusDistribution": {
+        "200": 3
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "www.dianomi.com"
+      ],
+      "bodyAvailableCount": 3,
+      "jsonParseSuccessCount": 3,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (3 captures)",
+        "small average payload (479 bytes)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (3/3, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "identity.dmp",
+        "identity.sharedId",
+        "identity.id5",
+        "name",
+        "user.in_gdpr",
+        "user.in_ccpa",
+        "user.is_staff",
+        "user.can_dmp",
+        "user.country_code",
+        "user.can_serve_ads",
+        "user.can_programmatic",
+        "user.can_cookie",
+        "user.adchoices",
+        "user.dnt",
+        "partner_id",
+        "units[0].data",
+        "units[0].type",
+        "units[0].args",
+        "unique_id",
+        "args.width",
+        "cfid",
+        "partner_tcf_status",
+        "units[0].numAds",
+        "units[0].weight"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.312Z",
+      "lastSeen": "2026-02-04T18:01:01.623Z",
+      "heuristicScore": 0.225,
+      "mlScore": 0.472,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.528,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /analytics/:id/id5-api-js",
+      "method": "GET",
+      "normalizedPath": "/analytics/:id/id5-api-js",
+      "score": 0.407,
+      "count": 2,
+      "avgSize": 1505,
+      "maxSize": 1505,
+      "schemaHashes": [
+        "7af4c67129dfd0ddef65978e182ab7e9d2d37415aca201bf2c6c848ca6d2427e"
+      ],
+      "statusCounts": {
+        "200": 2
+      },
+      "statusDistribution": {
+        "200": 2
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "api.id5-sync.com"
+      ],
+      "bodyAvailableCount": 2,
+      "jsonParseSuccessCount": 2,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (2 captures)",
+        "large average payload (1.5KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (2/2, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "sampling",
+        "ingestUrl",
+        "additionalCleanupRules.auctionEnd",
+        "additionalCleanupRules.bidWon"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.370Z",
+      "lastSeen": "2026-02-04T18:01:01.863Z",
+      "heuristicScore": 0.252,
+      "mlScore": 0.407,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.593,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /gh/prebid/currency-file@1/latest.json",
+      "method": "GET",
+      "normalizedPath": "/gh/prebid/currency-file@1/latest.json",
+      "score": 0.349,
+      "count": 1,
+      "avgSize": 1568,
+      "maxSize": 1568,
+      "schemaHashes": [
+        "fdd506c3570cabfe2b1d99ece251959a40ef146ac96b7559f2f16f6b14b89a98"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "cdn.jsdelivr.net"
+      ],
+      "bodyAvailableCount": 1,
+      "jsonParseSuccessCount": 1,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "large average payload (1.5KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (1/1, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "generatedAt",
+        "dataAsOf",
+        "conversions.USD.EUR",
+        "conversions.USD.USD",
+        "conversions.USD.JPY",
+        "conversions.USD.CZK",
+        "conversions.USD.DKK",
+        "conversions.USD.GBP",
+        "conversions.USD.HUF",
+        "conversions.USD.PLN",
+        "conversions.USD.RON",
+        "conversions.USD.SEK",
+        "conversions.GBP.EUR",
+        "conversions.GBP.USD",
+        "conversions.GBP.JPY",
+        "conversions.GBP.CZK",
+        "conversions.GBP.DKK",
+        "conversions.GBP.GBP",
+        "conversions.GBP.HUF",
+        "conversions.GBP.PLN",
+        "conversions.GBP.RON",
+        "conversions.GBP.SEK"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.467Z",
+      "lastSeen": "2026-02-04T18:01:01.467Z",
+      "heuristicScore": 0.251,
+      "mlScore": 0.349,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.651,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /data/:id",
+      "method": "GET",
+      "normalizedPath": "/data/:id",
+      "score": 0.342,
+      "count": 1,
+      "avgSize": 3216,
+      "maxSize": 3216,
+      "schemaHashes": [
+        "4343d9b16e3fc7437c3720de925ff33d498d66c7221dabbc897db56f38570ce8"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "uat5-a.investingchannel.com"
+      ],
+      "bodyAvailableCount": 1,
+      "jsonParseSuccessCount": 1,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "large average payload (3.1KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (1/1, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "site.siteid",
+        "site.dfpkeyname",
+        "site.adtagname",
+        "site.dfpsiteid",
+        "site.networkcode",
+        "site.tagmanager",
+        "site.apikey",
+        "site.pageAttributeEnabled",
+        "features.gdprcmp",
+        "features.usprivacy",
+        "features.sovrnuidmodule",
+        "features.pubmatic_cookie",
+        "features.isadmiraladblockerenabled",
+        "features.ticker_config",
+        "features.pageview_log_interval",
+        "features.dmp",
+        "features.markit",
+        "features.ic_adblocker_config",
+        "user.uid",
+        "user.ip",
+        "user.geo",
+        "user.fromgdprcountry",
+        "user.fromuspstate",
+        "user.region",
+        "user.browser",
+        "user.device",
+        "common.autotargetstatus",
+        "common.globaltarget.dfpkeyname",
+        "common.globaltarget.kval",
+        "common.globaltarget.rules",
+        "common.keyvalues",
+        "common.pixelsegment",
+        "common.adslotkeyvalues",
+        "common.tickerkval",
+        "common.status",
+        "common.zone",
+        "common.ticker",
+        "common.pageType"
+      ],
+      "firstSeen": "2026-02-04T18:01:00.582Z",
+      "lastSeen": "2026-02-04T18:01:00.582Z",
+      "heuristicScore": 0.3,
+      "mlScore": 0.342,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.658,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /api/config/prebid",
+      "method": "POST",
+      "normalizedPath": "/api/config/prebid",
+      "score": 0.294,
+      "count": 3,
+      "avgSize": 186,
+      "maxSize": 196,
+      "schemaHashes": [
+        "1c87cb3cb0bc9a197ca9c61e30eda972e2ffa7e2ff04505dbbc6a236ec6f7395"
+      ],
+      "statusCounts": {
+        "200": 3
+      },
+      "statusDistribution": {
+        "200": 3
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "id5-sync.com"
+      ],
+      "bodyAvailableCount": 3,
+      "jsonParseSuccessCount": 3,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (3 captures)",
+        "small average payload (186 bytes)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (3/3, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "fetchCall.url",
+        "fetchCall.overrides.pbExtensions",
+        "extensionsCall.url",
+        "extensionsCall.method"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.375Z",
+      "lastSeen": "2026-02-04T18:01:02.339Z",
+      "heuristicScore": 0.216,
+      "mlScore": 0.294,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.706,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /:id/pb",
+      "method": "POST",
+      "normalizedPath": "/:id/pb",
+      "score": 0.29,
+      "count": 3,
+      "avgSize": 1137,
+      "maxSize": 1232,
+      "schemaHashes": [
+        "a7e7e2f59b128bdb0aa60f56f5211efefdf83b92994b8f4a5d2e18126a0a14de"
+      ],
+      "statusCounts": {
+        "200": 3
+      },
+      "statusDistribution": {
+        "200": 3
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "ad.360yield.com"
+      ],
+      "bodyAvailableCount": 3,
+      "jsonParseSuccessCount": 3,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (3 captures)",
+        "large average payload (1.1KB)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (3/3, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "ext.improvedigital.sync"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.490Z",
+      "lastSeen": "2026-02-04T18:01:34.131Z",
+      "heuristicScore": 0.245,
+      "mlScore": 0.29,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.71,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /gampad/ads",
+      "method": "GET",
+      "normalizedPath": "/gampad/ads",
+      "score": 0.259,
+      "count": 2,
+      "avgSize": 1171,
+      "maxSize": 1494,
+      "schemaHashes": [
+        "dd032a109c1baf24b771a0ecc57094ce9a3472084c1ddf3d83c9a8f363be3886",
+        "2ef58dfa5f365f7e79d6515877a1a3f04cce941aa30ec0b98c98a80a5dfa3aff"
+      ],
+      "statusCounts": {
+        "200": 2
+      },
+      "statusDistribution": {
+        "200": 2
+      },
+      "distinctSchemas": 2,
+      "hosts": [
+        "securepubads.g.doubleclick.net"
+      ],
+      "bodyAvailableCount": 2,
+      "jsonParseSuccessCount": 2,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (2 captures)",
+        "large average payload (1.1KB)",
+        "mostly stable schema (2 variants)",
+        "strong JSON body evidence (2/2, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "/5206/Macrotrends/charts",
+        "/5206/Macrotrends/WebInterstitial"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.371Z",
+      "lastSeen": "2026-02-04T18:01:01.688Z",
+      "heuristicScore": 0.202,
+      "mlScore": 0.259,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.741,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /:id",
+      "method": "POST",
+      "normalizedPath": "/:id",
+      "score": 0.248,
+      "count": 2,
+      "avgSize": 156,
+      "maxSize": 295,
+      "schemaHashes": [
+        "200ce05ee5484dcef344ddfd6dde09f33d68b0aa431a2d6843fbfcd3eec44e4b",
+        "08fddbc83d3de346b066c02bde82e898a0a75742cdc23c0b87706152c6facebd"
+      ],
+      "statusCounts": {
+        "200": 2
+      },
+      "statusDistribution": {
+        "200": 2
+      },
+      "distinctSchemas": 2,
+      "hosts": [
+        "urbanlaurel.com"
+      ],
+      "bodyAvailableCount": 2,
+      "jsonParseSuccessCount": 2,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (2 captures)",
+        "small average payload (156 bytes)",
+        "mostly stable schema (2 variants)",
+        "deeply nested structure (avg depth: 2.5)",
+        "strong JSON body evidence (2/2, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "newSession",
+        "sessionID",
+        "now",
+        "ids[0].id",
+        "ids[0].type",
+        "localData",
+        "visitorStatus.known",
+        "visitorStatus.registered",
+        "visitorStatus.subscribed",
+        "visitorStatus.visitorID",
+        "visitorStatus.offers",
+        "segments"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.312Z",
+      "lastSeen": "2026-02-04T18:01:01.371Z",
+      "heuristicScore": 0.172,
+      "mlScore": 0.248,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.752,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /:id/map",
+      "method": "POST",
+      "normalizedPath": "/:id/map",
+      "score": 0.203,
+      "count": 1,
+      "avgSize": 235,
+      "maxSize": 235,
+      "schemaHashes": [
+        "815752fbd218febdc1f8dd1a0105ca3d552794b0680e8f3f222f09b9b241cf73"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "bcp.crwdcntrl.net"
+      ],
+      "bodyAvailableCount": 1,
+      "jsonParseSuccessCount": 1,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "small average payload (235 bytes)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 3.0)",
+        "strong JSON body evidence (1/1, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "pid",
+        "c[0].k",
+        "c[0].v",
+        "c[0].e",
+        "ids[0].i",
+        "ids[0].t",
+        "ids[0].c",
+        "ids[0].e"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.198Z",
+      "lastSeen": "2026-02-04T18:01:01.198Z",
+      "heuristicScore": 0.211,
+      "mlScore": 0.203,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.797,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /e/dtb/bid",
+      "method": "POST",
+      "normalizedPath": "/e/dtb/bid",
+      "score": 0.159,
+      "count": 4,
+      "avgSize": 257,
+      "maxSize": 373,
+      "schemaHashes": [
+        "2aaa3223d6fc0ae0881ed8b9f758db2baa039ba8bc5a9cd476785e30a5e1949a"
+      ],
+      "statusCounts": {
+        "200": 4
+      },
+      "statusDistribution": {
+        "200": 4
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "aax.amazon-adsystem.com"
+      ],
+      "bodyAvailableCount": 4,
+      "jsonParseSuccessCount": 4,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (4 captures)",
+        "small average payload (257 bytes)",
+        "stable schema (1 variant)",
+        "deeply nested structure (avg depth: 2.3)",
+        "strong JSON body evidence (4/4, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "contextual.cfg.CONFIG_CALL_ENABLED",
+        "contextual.cfg.v",
+        "contextual.cmp",
+        "contextual.cb"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.364Z",
+      "lastSeen": "2026-02-04T18:01:34.376Z",
+      "heuristicScore": 0.222,
+      "mlScore": 0.159,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.841,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /universal/v1",
+      "method": "POST",
+      "normalizedPath": "/universal/v1",
+      "score": 0.145,
+      "count": 5,
+      "avgSize": 621,
+      "maxSize": 755,
+      "schemaHashes": [
+        "567acb6a11aa0d1718ecd109f0174f1418e9ff135ba4f4ae78a89acdb32aeaed"
+      ],
+      "statusCounts": {
+        "200": 5
+      },
+      "statusDistribution": {
+        "200": 5
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "btlr.sharethrough.com"
+      ],
+      "bodyAvailableCount": 5,
+      "jsonParseSuccessCount": 5,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (5 captures)",
+        "small average payload (621 bytes)",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (5/5, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "cookieSyncUrls"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.027Z",
+      "lastSeen": "2026-02-04T18:01:34.135Z",
+      "heuristicScore": 0.236,
+      "mlScore": 0.145,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.855,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /sid/json",
+      "method": "GET",
+      "normalizedPath": "/sid/json",
+      "score": 0.122,
+      "count": 1,
+      "avgSize": 362,
+      "maxSize": 362,
+      "schemaHashes": [
+        "c16d29f0681d7e2ed95f7989d14cf97651ebc62f6b2a95d98b840356a951eec8"
+      ],
+      "statusCounts": {
+        "200": 1
+      },
+      "statusDistribution": {
+        "200": 1
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "gum.criteo.com"
+      ],
+      "bodyAvailableCount": 1,
+      "jsonParseSuccessCount": 1,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "small average payload (362 bytes)",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (1/1, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "bundle",
+        "bidId",
+        "pixels"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.182Z",
+      "lastSeen": "2026-02-04T18:01:01.182Z",
+      "heuristicScore": 0.214,
+      "mlScore": 0.122,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.878,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /hb-multi",
+      "method": "POST",
+      "normalizedPath": "/hb-multi",
+      "score": 0.118,
+      "count": 4,
+      "avgSize": 306,
+      "maxSize": 307,
+      "schemaHashes": [
+        "a20b52fae57cc7a99c9651f1b573950fd211823e3ace3bb9c273c06430f24cd3"
+      ],
+      "statusCounts": {
+        "200": 4
+      },
+      "statusDistribution": {
+        "200": 4
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "hb.yellowblue.io"
+      ],
+      "bodyAvailableCount": 4,
+      "jsonParseSuccessCount": 4,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (4 captures)",
+        "small average payload (306 bytes)",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (4/4, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "params.sessionId",
+        "params.publisherId",
+        "params.userSyncURL"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.019Z",
+      "lastSeen": "2026-02-04T18:01:34.135Z",
+      "heuristicScore": 0.223,
+      "mlScore": 0.118,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.882,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /lb/v1",
+      "method": "GET",
+      "normalizedPath": "/lb/v1",
+      "score": 0.107,
+      "count": 6,
+      "avgSize": 45,
+      "maxSize": 45,
+      "schemaHashes": [
+        "0a0f59a7351f5b5fe3cc8de4fe899f1f595109edd5800a1f39cc6493b5ef27c1"
+      ],
+      "statusCounts": {
+        "200": 6
+      },
+      "statusDistribution": {
+        "200": 6
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "lb.eu-1-id5-sync.com"
+      ],
+      "bodyAvailableCount": 6,
+      "jsonParseSuccessCount": 6,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (6 captures)",
+        "small average payload (45 bytes)",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (6/6, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "lb",
+        "ttl"
+      ],
+      "firstSeen": "2026-02-04T18:01:02.219Z",
+      "lastSeen": "2026-02-04T18:01:02.864Z",
+      "heuristicScore": 0.222,
+      "mlScore": 0.107,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.893,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /in.php",
+      "method": "GET",
+      "normalizedPath": "/in.php",
+      "score": 0.064,
+      "count": 2,
+      "avgSize": 54,
+      "maxSize": 105,
+      "schemaHashes": [
+        "4e2103f7c47cc540e5790da7ad23d782a556649bbb90200a9c5e79d014ee7cd2"
+      ],
+      "statusCounts": {
+        "200": 2
+      },
+      "statusDistribution": {
+        "200": 2
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "in.getclicky.com"
+      ],
+      "bodyAvailableCount": 2,
+      "jsonParseSuccessCount": 2,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (2 captures)",
+        "small average payload (54 bytes)",
+        "has array structure",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (2/2, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "v._cgen_custom.cookies_disable",
+        "v._heatmaps_g2g_100827248",
+        "f.advanced",
+        "f.ping_start"
+      ],
+      "firstSeen": "2026-02-04T18:01:00.873Z",
+      "lastSeen": "2026-02-04T18:01:31.019Z",
+      "heuristicScore": 0.309,
+      "mlScore": 0.064,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.936,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /cgi-bin/consent.pl",
+      "method": "GET",
+      "normalizedPath": "/cgi-bin/consent.pl",
+      "score": 0.054,
+      "count": 3,
+      "avgSize": 120,
+      "maxSize": 123,
+      "schemaHashes": [
+        "0b3bf385600b59dff07ed0edd74fdfed03d413812c73e146dbe13fa27fcfa392"
+      ],
+      "statusCounts": {
+        "200": 3
+      },
+      "statusDistribution": {
+        "200": 3
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "www.dianomi.com"
+      ],
+      "bodyAvailableCount": 3,
+      "jsonParseSuccessCount": 3,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (3 captures)",
+        "small average payload (120 bytes)",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (3/3, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "cfid",
+        "partner_tcf_status",
+        "partner_id",
+        "unique_id",
+        "name"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.135Z",
+      "lastSeen": "2026-02-04T18:01:01.198Z",
+      "heuristicScore": 0.214,
+      "mlScore": 0.054,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.946,
+      "usedML": true
+    },
+    {
+      "endpointKey": "POST /prebid/v1",
+      "method": "POST",
+      "normalizedPath": "/prebid/v1",
+      "score": 0.052,
+      "count": 6,
+      "avgSize": 942,
+      "maxSize": 1135,
+      "schemaHashes": [
+        "9e474aa129d7aad747a3a3b77a5981b98f8ec6e072ae9e9ee2daa61486a62b49"
+      ],
+      "statusCounts": {
+        "200": 6
+      },
+      "statusDistribution": {
+        "200": 6
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "prg.smartadserver.com"
+      ],
+      "bodyAvailableCount": 6,
+      "jsonParseSuccessCount": 6,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (6 captures)",
+        "small average payload (942 bytes)",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (6/6, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "cpm",
+        "currency",
+        "width",
+        "height",
+        "ad",
+        "adUrl",
+        "dealId",
+        "ttl",
+        "isNetCpm",
+        "creativeId"
+      ],
+      "firstSeen": "2026-02-04T18:01:01.020Z",
+      "lastSeen": "2026-02-04T18:01:34.125Z",
+      "heuristicScore": 0.249,
+      "mlScore": 0.052,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.948,
+      "usedML": true
+    },
+    {
+      "endpointKey": "GET /getconfig/sodar",
+      "method": "GET",
+      "normalizedPath": "/getconfig/sodar",
+      "score": 0.051,
+      "count": 3,
+      "avgSize": 17824,
+      "maxSize": 17893,
+      "schemaHashes": [
+        "d7e2d0c2f6cfc9f3981dd90007caa6b6aec471ceacd6392c49b2f33b25c71e7c"
+      ],
+      "statusCounts": {
+        "200": 3
+      },
+      "statusDistribution": {
+        "200": 3
+      },
+      "distinctSchemas": 1,
+      "hosts": [
+        "ep1.adtrafficquality.google"
+      ],
+      "bodyAvailableCount": 3,
+      "jsonParseSuccessCount": 3,
+      "noBodyCount": 0,
+      "bodyAvailableRate": 1,
+      "bodyRate": 1,
+      "bodyEvidenceFactor": 1,
+      "reasons": [
+        "low frequency (3 captures)",
+        "large average payload (17.4KB)",
+        "stable schema (1 variant)",
+        "strong JSON body evidence (3/3, 100%)"
+      ],
+      "sampleKeyPaths": [
+        "sodar_query_id",
+        "injector_basename",
+        "bg_hash_basename",
+        "bg_binary",
+        "rc_enable",
+        "bg_snapshot_delay_ms",
+        "is_gen_204"
+      ],
+      "firstSeen": "2026-02-04T18:01:02.470Z",
+      "lastSeen": "2026-02-04T18:01:35.115Z",
+      "heuristicScore": 0.511,
+      "mlScore": 0.051,
+      "mlLabel": "non-data",
+      "mlConfidence": 0.949,
+      "usedML": true
+    }
+  ]
+}

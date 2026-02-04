@@ -21,6 +21,7 @@ export interface LabelCommandOptions {
   export?: boolean;
   out?: string;
   autoNonDataNoBody?: boolean;
+  autoOnly?: boolean;
 }
 
 interface EndpointRecord {
@@ -85,6 +86,16 @@ export async function labelCommand(captureDir: string, options: LabelCommandOpti
         return;
       }
 
+      if (options.autoOnly) {
+        const selected = await promptRunSelection(rl, runs, true);
+        if (selected.length === 0) {
+          console.log(chalk.yellow('No captures selected.'));
+          return;
+        }
+        await autoLabelOnlyFromRuns(selected, options, resolvedDir);
+        return;
+      }
+
       const selected = await promptRunSelection(rl, runs, false);
       if (selected.length === 0) {
         console.log(chalk.yellow('No capture selected.'));
@@ -100,6 +111,10 @@ export async function labelCommand(captureDir: string, options: LabelCommandOpti
   const run = runs[0];
   if (options.export) {
     await exportTrainingFromRuns([run], options, run.labelsDir);
+    return;
+  }
+  if (options.autoOnly) {
+    await autoLabelOnlyFromRuns([run], options, captureDir);
     return;
   }
   await labelSingleRun(run, options, captureDir);
@@ -631,6 +646,47 @@ async function cleanupTempFiles(filePaths: string[]): Promise<void> {
     } catch {
       // Ignore errors during cleanup
     }
+  }
+}
+
+async function autoLabelOnlyFromRuns(
+  runs: CaptureRunInfo[],
+  options: LabelCommandOptions,
+  outputDir: string
+): Promise<void> {
+  console.log(chalk.bold.cyan('\nAuto-labeling endpoints with no body\n'));
+  console.log(divider());
+
+  let totalLabeled = 0;
+
+  for (const run of runs) {
+    await ensureEndpoints(run.path, run.endpointsPath);
+    const endpoints = await loadEndpoints(run.endpointsPath);
+
+    // Ensure labels directory and file exist so appendFile won't fail
+    await mkdir(run.labelsDir, { recursive: true });
+    if (!existsSync(run.labelsPath)) {
+      await writeFile(run.labelsPath, '', 'utf-8');
+    }
+
+    const labelsMap = await loadLabels(run.labelsPath);
+    const samples = await loadEndpointSamples(run.path, endpoints.map(ep => ep.endpointKey));
+
+    const filtered = applyFilters(endpoints, options);
+    const count = await autoLabelNoBody(filtered, labelsMap, samples, run.labelsPath);
+    
+    if (count > 0) {
+      console.log(chalk.gray(`${run.name}: auto-labeled ${count} endpoint(s) as non-data (no body)`));
+      totalLabeled += count;
+    }
+  }
+
+  console.log(divider());
+  if (totalLabeled > 0) {
+    console.log(chalk.green(`✓ Auto-labeled ${totalLabeled} endpoint(s) total`));
+    console.log(chalk.gray('Export training data with: ') + chalk.cyan(`netjsonmon label ${runs[0]?.name ?? outputDir} --export`));
+  } else {
+    console.log(chalk.yellow('No endpoints with no body found to auto-label.'));
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "trainedAt": "2026-02-04T08:46:35.628830Z",
+  "trainedAt": "2026-02-04T18:26:36.104303Z",
   "modelType": "logistic_regression",
   "hyperparameters": {
     "class_weight": "balanced",
@@ -11,19 +11,19 @@
   },
   "trainingData": {
     "sources": [
-      "/Users/Mikael/Documents/Coding Projects/netjsonmon/training-captures/training.jsonl"
+      "C:\\Users\\mikae\\Coding_Projects\\netjsonmon\\training-captures\\training.jsonl"
     ],
-    "totalExamples": 58,
-    "dataCount": 7,
-    "nonDataCount": 51
+    "totalExamples": 212,
+    "dataCount": 10,
+    "nonDataCount": 202
   },
   "performance": {
-    "cvF1Mean": 0.5333333333333333,
-    "cvF1Std": 0.3231786571610886,
-    "testF1": 0.6666666666666666,
-    "testPrecision": 0.5,
-    "testRecall": 1.0,
-    "testROCAUC": 0.9090909090909092
+    "cvF1Mean": 0.6599999999999999,
+    "cvF1Std": 0.27999999999999997,
+    "testF1": 0.0,
+    "testPrecision": 0.0,
+    "testRecall": 0.0,
+    "testROCAUC": 0.5731707317073171
   },
   "features": {
     "numerical_features": [

@@ -133,6 +133,7 @@ program
   .option('--limit <count>', 'Limit number of endpoints to label')
   .option('--includeLabeled', 'Include endpoints that already have labels', false)
   .option('--autoNonDataNoBody', 'Auto-label endpoints without bodies as non-data', false)
+  .option('--autoOnly', 'Only run auto-labeling, skip interactive labeling', false)
   .option('--export', 'Export training.jsonl from existing labels', false)
   .option('--out <filename>', 'Output filename for training export')
   .action(async (captureDir: string | undefined, options: any) => {
