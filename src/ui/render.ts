@@ -248,3 +248,102 @@ export function outputJSON(data: any): void {
 export function divider(char: string = '─', length: number = 80): string {
   return chalk.gray(char.repeat(length));
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4 — Watch mode live dashboard
+// ---------------------------------------------------------------------------
+
+export interface LiveEndpointEntry {
+  method: string;
+  normalizedPath: string;
+  count: number;
+  totalSize: number;   // bytes — for avg calculation
+}
+
+/**
+ * Render the full-screen live dashboard for --watch mode.
+ *
+ * Call this function on a periodic interval, then use
+ * `process.stdout.write('\x1b[2J\x1b[H' + output)` to clear and redraw.
+ *
+ * @param url          The monitored URL.
+ * @param captureDir   Output directory path.
+ * @param elapsedMs    Milliseconds since monitoring started.
+ * @param captures     Running capture count.
+ * @param duplicates   Running duplicate count.
+ * @param entries      Live endpoint map (endpointKey → entry).
+ */
+export function renderLiveDashboard(
+  url: string,
+  captureDir: string,
+  elapsedMs: number,
+  captures: number,
+  duplicates: number,
+  entries: Map<string, LiveEndpointEntry>,
+): string {
+  const elapsed = formatElapsed(elapsedMs);
+
+  const header = [
+    chalk.bold.cyan('  ● WATCH MODE') + chalk.gray(' — live endpoint discovery'),
+    `  URL: ${chalk.cyan(url)}`,
+    `  Elapsed: ${chalk.white(elapsed)}  ` +
+      `Captures: ${chalk.green(captures.toString())}  ` +
+      `Duplicates: ${chalk.yellow(duplicates.toString())}`,
+    `  Output: ${chalk.gray(captureDir)}`,
+    '',
+  ].join('\n');
+
+  if (entries.size === 0) {
+    return (
+      header +
+      chalk.gray('  Waiting for network requests...\n') +
+      '\n' +
+      chalk.gray('  Press Ctrl+C or close the browser to finish.')
+    );
+  }
+
+  // Sort by count descending (most active endpoints first)
+  const sorted = [...entries.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 20); // cap at 20 rows
+
+  const table = new Table({
+    head: [
+      chalk.bold('#'),
+      chalk.bold('Method'),
+      chalk.bold('Path'),
+      chalk.bold('Hits'),
+      chalk.bold('Avg Size'),
+    ],
+    style: { head: [], border: ['gray'] },
+    colWidths: [4, 8, 52, 6, 12],
+  });
+
+  sorted.forEach(([_key, entry], i) => {
+    const avgSize = entry.count > 0 ? Math.round(entry.totalSize / entry.count) : 0;
+    table.push([
+      chalk.gray((i + 1).toString()),
+      chalk.cyan(entry.method),
+      truncate(entry.normalizedPath, 50),
+      chalk.green(entry.count.toString()),
+      formatBytes(avgSize),
+    ]);
+  });
+
+  return (
+    header +
+    table.toString() +
+    '\n\n' +
+    chalk.gray('  Press Ctrl+C or close the browser to stop and save the capture.')
+  );
+}
+
+function formatElapsed(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}

@@ -13,6 +13,7 @@ import { inspectCommand } from './commands/inspect.js';
 import { endpointsCommand } from './commands/endpoints.js';
 import { labelCommand } from './commands/label.js';
 import { trainCommand } from './commands/train.js';
+import { mcpCommand } from './commands/mcp.js';
 
 const program = new Command();
 
@@ -44,8 +45,16 @@ program
   .option('--consentMode <mode>', 'Consent handling: auto, off, yahoo, generic', 'auto')
   .option('--consentAction <action>', 'Consent action preference: reject or accept', 'reject')
   .option('--consentHandlers <list>', 'Comma-separated handlers to enable (default: all)', undefined)
-  .option('--storageState <path>', 'Load browser storage state from file')
+  .option('--storageState <path>', 'Load browser storage state from file (alias: --useSession)')
+  .option('--useSession <path>', 'Alias for --storageState (load authenticated session from file)')
   .option('--saveStorageState', 'Save browser storage state after flow', false)
+  .option('--saveSession <path>', 'Save authenticated session to a custom path after run')
+  .option('--userDataDir <path>', 'Use persistent Chrome profile directory across runs')
+  .option('--stealth', 'Enable stealth mode (enhanced anti-bot fingerprint hardening)', false)
+  .option('--proxy <url>', 'Route traffic through a proxy (http://host:port or socks5://user:pass@host:port)')
+  .option('--proxyList <file>', 'Path to a file of proxy URLs (one per line) — rotated round-robin')
+  .option('--proxyAuth <user:pass>', 'Credential override applied to --proxy or --proxyList entries')
+  .option('--watch', 'Interactive watch mode: keeps browser open indefinitely with a live endpoint dashboard', false)
   .option('--disableSummary', 'Disable automatic summary generation', false)
   .option('--quiet', 'Suppress non-essential output', false)
   .option('--verbose', 'Show verbose progress information', false)
@@ -160,6 +169,20 @@ program
       await trainCommand(targetDir, options);
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// MCP server command
+program
+  .command('mcp')
+  .description('Start a stdio-based MCP server exposing netjsonmon tools to AI assistants')
+  .action(async () => {
+    try {
+      await mcpCommand();
+    } catch (error) {
+      // Write to stderr — stdout must stay clean for the MCP JSON-RPC stream
+      process.stderr.write(`MCP server error: ${error instanceof Error ? error.message : String(error)}\n`);
       process.exit(1);
     }
   });

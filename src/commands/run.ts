@@ -4,6 +4,7 @@
 
 import { resolve } from 'path';
 import { monitor } from '../monitor.js';
+import { loadProxyList } from '../proxy.js';
 import type { MonitorOptions } from '../types.js';
 import type { OutputMode } from '../ui/render.js';
 
@@ -38,8 +39,20 @@ export interface RunCommandOptions {
   consentAction?: string;
   consentHandlers?: string;
   storageState?: string;
+  useSession?: string; // Alias for storageState
   saveStorageState: boolean;
-  
+  // Phase 1 — Named Auth Sessions
+  saveSession?: string;
+  userDataDir?: string;
+  // Phase 2 — Stealth
+  stealth: boolean;
+  // Phase 3 — Proxy
+  proxy?: string;
+  proxyList?: string;  // Raw file path string from CLI
+  proxyAuth?: string;
+  // Phase 4 — Watch mode
+  watch: boolean;
+
   // Output
   disableSummary: boolean;
   quiet: boolean;
@@ -47,6 +60,13 @@ export interface RunCommandOptions {
   debug: boolean;
   json: boolean;
   open: boolean;
+}
+
+export function resolveStorageStateInput(options: {
+  storageState?: string;
+  useSession?: string;
+}): string | undefined {
+  return options.storageState ?? options.useSession;
 }
 
 export async function runCommand(url: string, options: RunCommandOptions): Promise<void> {
@@ -70,6 +90,12 @@ export async function runCommand(url: string, options: RunCommandOptions): Promi
       ? options.consentHandlers.split(',').map(h => h.trim()).filter(Boolean)
       : undefined;
 
+  // Phase 3 — Proxy: load list file into a string[] if a path was given
+  let proxyList: string[] | undefined;
+  if (options.proxyList) {
+    proxyList = loadProxyList(options.proxyList);
+  }
+
   const monitorOptions: MonitorOptions & { outputMode: OutputMode } = {
     url,
     headless: options.headless,
@@ -90,8 +116,15 @@ export async function runCommand(url: string, options: RunCommandOptions): Promi
     consentMode,
     consentAction,
     consentHandlers,
-    storageState: options.storageState,
+    storageState: resolveStorageStateInput(options),
     saveStorageState: options.saveStorageState,
+    saveSession: options.saveSession,
+    userDataDir: options.userDataDir,
+    stealth: options.stealth,
+    proxy: options.proxy,
+    proxyList,
+    proxyAuth: options.proxyAuth,
+    watch: options.watch,
     disableSummary: options.disableSummary,
     outputMode: {
       json: options.json,
@@ -102,7 +135,7 @@ export async function runCommand(url: string, options: RunCommandOptions): Promi
   };
 
   // Validate options
-  if (monitorOptions.monitorMs >= monitorOptions.timeoutMs) {
+  if (!monitorOptions.watch && monitorOptions.monitorMs >= monitorOptions.timeoutMs) {
     throw new Error('monitorMs must be less than timeoutMs');
   }
   if (monitorOptions.inlineBodyBytes > monitorOptions.maxBodyBytes) {

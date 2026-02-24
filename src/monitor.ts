@@ -2,13 +2,15 @@
  * Monitor orchestrator - captures network JSON during a deterministic window
  */
 
-import { chromium, type Browser, type BrowserContext, type Page, type Response } from 'playwright';
+import { chromium as playwrightChromium, type Browser, type BrowserContext, type Page, type Response } from 'playwright';
 import { randomBytes } from 'crypto';
 import { resolve } from 'path';
+import { STEALTH_ARGS, STEALTH_CONTEXT_OPTIONS, STEALTH_SCRIPTS } from './stealth/index.js';
+import { resolveProxy } from './proxy.js';
 import ora, { type Ora } from 'ora';
 import chalk from 'chalk';
 import type { MonitorOptions, CaptureRecord } from './types.js';
-import type { OutputMode } from './ui/render.js';
+import type { OutputMode, LiveEndpointEntry } from './ui/render.js';
 import { CaptureStore } from './store.js';
 import { runFlow } from './flowRunner.js';
 import { redactHeaders, redactUrl, redactError } from './redact.js';
@@ -17,7 +19,7 @@ import { normalizeUrl, endpointKey } from './normalize.js';
 import { extractFeatures } from './features.js';
 import { generateSummary } from './summary.js';
 import { ConcurrencyLimiter } from './queue.js';
-import { renderRunHeader } from './ui/render.js';
+import { renderRunHeader, renderLiveDashboard } from './ui/render.js';
 
 const XHR_FETCH_TYPES = new Set(['xhr', 'fetch']);
 const JSON_CONTENT_TYPES = new Set([
@@ -26,6 +28,14 @@ const JSON_CONTENT_TYPES = new Set([
   'application/hal+json',
   'application/vnd.api+json',
 ]);
+
+type ChromiumLike = {
+  launch: typeof playwrightChromium.launch;
+  launchPersistentContext: typeof playwrightChromium.launchPersistentContext;
+};
+
+let stealthPluginInitialized = false;
+let proxyRotationIndex = 0;
 
 /**
  * Check if content-type indicates JSON
@@ -49,6 +59,35 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
       clearTimeout(timeoutHandle);
     }
   });
+}
+
+async function getChromiumEngine(stealth: boolean): Promise<ChromiumLike> {
+  if (!stealth) {
+    return playwrightChromium;
+  }
+
+  const playwrightExtra = await import('playwright-extra');
+  const chromium = (playwrightExtra as any).chromium as (ChromiumLike & { use?: (plugin: any) => void }) | undefined;
+  if (!chromium) {
+    throw new Error('Stealth mode failed: playwright-extra did not expose chromium.');
+  }
+
+  if (!stealthPluginInitialized) {
+    const stealthModule = await import('puppeteer-extra-plugin-stealth');
+    const createStealthPlugin = (stealthModule as any).default ?? stealthModule;
+    const plugin = typeof createStealthPlugin === 'function'
+      ? createStealthPlugin()
+      : createStealthPlugin;
+
+    if (!chromium.use || !plugin) {
+      throw new Error('Stealth mode failed: unable to initialize puppeteer-extra-plugin-stealth.');
+    }
+
+    chromium.use(plugin);
+    stealthPluginInitialized = true;
+  }
+
+  return chromium;
 }
 
 /**
@@ -127,37 +166,57 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
   const progressIntervalMs = 2000; // Update spinner every 2 seconds if active
   const operationStartTime = Date.now(); // Track overall operation time
   
-  // Create an AbortController for enforcing hard timeout
+  // Create an AbortController for enforcing hard timeout in non-watch runs.
   const abortController = new AbortController();
-  const timeoutHandle = setTimeout(() => {
-    abortController.abort(new Error(`Hard timeout exceeded (${options.timeoutMs}ms)`));
-  }, options.timeoutMs);
+  let timeoutHandle: NodeJS.Timeout | undefined;
+  if (!options.watch) {
+    timeoutHandle = setTimeout(() => {
+      abortController.abort(new Error(`Hard timeout exceeded (${options.timeoutMs}ms)`));
+    }, options.timeoutMs);
+  }
+
+  // Phase 3 — resolve proxy (single string or round-robin from list)
+  const { proxy: resolvedProxy, nextIndex } = resolveProxy(options, proxyRotationIndex);
+  if (options.proxyList && options.proxyList.length > 0) {
+    proxyRotationIndex = nextIndex;
+  }
+
+  // Phase 4 — watch mode: force visible browser + live endpoint tracking
+  if (options.watch) {
+    (options as any).headless = false;
+  }
+  const liveEndpoints = new Map<string, LiveEndpointEntry>();
+  const watchStartTime = Date.now();
 
   try {
-    // Launch browser with stealth options to avoid bot detection
-    browser = await withTimeout(chromium.launch({ 
-      headless: options.headless,
-      args: [
-        '--disable-blink-features=AutomationControlled', // Hide automation
-        '--disable-features=IsolateOrigins,site-per-process', // Reduce fingerprinting
-      ],
-    }), options.timeoutMs, 'Browser launch');
-    succeedStage(spinner, 'Browser launched');
-    
-    // Create context with optional HAR recording and storage state
+    const chromium = await getChromiumEngine(options.stealth);
+    // Build Chrome launch args — stealth mode expands to ~30 hardening flags
+    const launchArgs = options.stealth
+      ? STEALTH_ARGS
+      : [
+          '--disable-blink-features=AutomationControlled',
+          '--disable-features=IsolateOrigins,site-per-process',
+        ];
+
+    // Build context options — stealth mode adds fingerprint-hardening overrides
     const contextOptions: any = {
       userAgent: options.userAgent,
-      // Additional stealth settings
-      viewport: { width: 1920, height: 1080 }, // Normal desktop viewport
+      viewport: { width: 1920, height: 1080 },
       locale: 'en-US',
       timezoneId: 'America/New_York',
       permissions: [],
     };
-    
+
+    if (options.stealth) {
+      // Mirrors Scrapling's StealthySessionMixin context hardening:
+      // dark color scheme, 2x DPI, geolocation/notifications, HTTPS error tolerance
+      Object.assign(contextOptions, STEALTH_CONTEXT_OPTIONS);
+    }
+
     if (options.storageState) {
       contextOptions.storageState = options.storageState;
     }
-    
+
     if (options.saveHar) {
       contextOptions.recordHar = {
         path: resolve(options.outDir, runId, 'session.har'),
@@ -165,38 +224,56 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
       };
     }
 
-    context = await withTimeout(browser.newContext(contextOptions), options.timeoutMs, 'Browser context creation');
+    // Phase 3 — inject proxy into context options (mirrors Scrapling's context proxy injection)
+    if (resolvedProxy) {
+      contextOptions.proxy = resolvedProxy;
+    }
+
+    // Launch: persistent profile (--userDataDir) or standard ephemeral context
+    if (options.userDataDir) {
+      // Mirrors Scrapling's launch_persistent_context approach:
+      // the entire Chrome profile (cookies, localStorage, IndexedDB) survives across runs.
+      // launchPersistentContext returns a BrowserContext directly — no separate Browser object.
+      context = await withTimeout(
+        chromium.launchPersistentContext(options.userDataDir, {
+          headless: options.headless,
+          args: launchArgs,
+          ...contextOptions,
+        }),
+        options.timeoutMs,
+        'Persistent browser context launch'
+      );
+      // browser stays undefined; context.close() also closes the underlying browser
+    } else {
+      browser = await withTimeout(
+        chromium.launch({ headless: options.headless, args: launchArgs }),
+        options.timeoutMs,
+        'Browser launch'
+      );
+      context = await withTimeout(
+        browser.newContext(contextOptions),
+        options.timeoutMs,
+        'Browser context creation'
+      );
+    }
+    succeedStage(spinner, options.userDataDir ? 'Browser launched (persistent profile)' : 'Browser launched');
+
     const page = await withTimeout(context.newPage(), options.timeoutMs, 'Page creation');
 
-    // Inject stealth scripts to avoid bot detection
-    await page.addInitScript(() => {
-      // Remove webdriver property
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined,
-      });
-      
-      // Override plugins to appear more like a real browser
-      Object.defineProperty(navigator, 'plugins', {
-        get: () => [
-          { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
-          { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: 'Portable Document Format' },
-          { name: 'Native Client', filename: 'internal-nacl-plugin', description: 'Native Client Executable' },
-        ],
-      });
-      
-      // Override chrome property
-      (window as any).chrome = {
-        runtime: {},
-      };
-      
-      // Override permissions
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters: any) => (
-        parameters.name === 'notifications'
-          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
-          : originalQuery(parameters)
-      );
-    });
+    // Inject fingerprint-hardening scripts at CONTEXT level (applies to all pages and frames).
+    // Stealth mode: all 6 comprehensive STEALTH_SCRIPTS (matches Scrapling's add_init_script approach).
+    // Baseline: minimal 2-script shim (webdriver + chrome) always safe to apply.
+    const scriptsToInject = options.stealth
+      ? STEALTH_SCRIPTS
+      : [
+          // Minimal baseline — webdriver removal
+          `Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });`,
+          // Minimal baseline — chrome object
+          `if (!window.chrome) { try { Object.defineProperty(window, 'chrome', { value: { runtime: {} }, writable: true, configurable: false }); } catch (_) {} }`,
+        ];
+    for (const script of scriptsToInject) {
+      await context.addInitScript(script);
+    }
 
     // Start trace if requested
     if (options.trace) {
@@ -223,7 +300,16 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
         }
         
         try {
-          const result = await handleResponse(response, options, store, includePattern, excludePattern, captureCount, seenCaptures);
+          const result = await handleResponse(
+            response, options, store, includePattern, excludePattern, captureCount, seenCaptures,
+            // onCapture callback: feed live endpoint stats for --watch dashboard
+            (key, method, normalizedPath, payloadSize) => {
+              const existing = liveEndpoints.get(key) ?? { method, normalizedPath, count: 0, totalSize: 0 };
+              existing.count++;
+              existing.totalSize += payloadSize;
+              liveEndpoints.set(key, existing);
+            },
+          );
           if (result === 'captured') {
             captureCount++;
           } else if (result === 'duplicate') {
@@ -344,30 +430,68 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
       succeedStage(spinner, 'Flow completed');
     }
 
-    // Save storage state if requested
+    // Save storage state if requested (to run capture dir)
     if (options.saveStorageState && context) {
       const storageStatePath = resolve(options.outDir, runId, 'storageState.json');
       await context.storageState({ path: storageStatePath });
       if (!outputMode.json && !outputMode.quiet) {
-        console.log(chalk.green('✓') + ` Saved storage state`);
+        console.log(chalk.green('✓') + ` Saved storage state to ${chalk.cyan(storageStatePath)}`);
       }
     }
 
-    // Capture window (respects hard timeout)
-    spinner = startStage(`Monitoring network (${options.monitorMs}ms)...`);
-    if (abortController.signal.aborted) {
-      throw abortController.signal.reason;
+    // Capture window — watch mode runs until browser closes; normal mode times out after monitorMs
+    if (options.watch) {
+      // Clear spinners and print an initial empty dashboard
+      spinner?.stop();
+      spinner = null;
+      process.stdout.write('\x1b[2J\x1b[H');
+
+      // Refresh dashboard every 1.5 seconds
+      let dashInterval: NodeJS.Timeout | undefined = setInterval(() => {
+        const dashboard = renderLiveDashboard(
+          options.url, captureDir,
+          Date.now() - watchStartTime,
+          captureCount, duplicateCount, liveEndpoints,
+        );
+        process.stdout.write('\x1b[2J\x1b[H' + dashboard + '\n');
+      }, 1500);
+
+      // Resolve when the browser window is closed or Ctrl+C is pressed
+      await new Promise<void>(res => {
+        const done = () => { clearInterval(dashInterval); dashInterval = undefined; res(); };
+        if (browser) browser.once('disconnected', done);
+        else context?.once('close', done);  // persistent context case
+        process.once('SIGINT', done);
+        abortController.signal.addEventListener('abort', done);
+      });
+
+      // Final render then clear
+      const finalDash = renderLiveDashboard(
+        options.url, captureDir,
+        Date.now() - watchStartTime,
+        captureCount, duplicateCount, liveEndpoints,
+      );
+      process.stdout.write('\x1b[2J\x1b[H' + finalDash + '\n');
+      if (!outputMode.json && !outputMode.quiet) {
+        console.log('\n' + chalk.green('✓') + ' Watch session ended — finalizing captures...');
+      }
+    } else {
+      // Normal timed capture window
+      spinner = startStage(`Monitoring network (${options.monitorMs}ms)...`);
+      if (abortController.signal.aborted) {
+        throw abortController.signal.reason;
+      }
+      const monitorPromise = new Promise<void>(resolve => setTimeout(resolve, options.monitorMs));
+      await Promise.race([
+        monitorPromise,
+        new Promise<void>((_, reject) => {
+          abortController.signal.addEventListener('abort', () => {
+            reject(abortController.signal.reason);
+          });
+        })
+      ]);
+      succeedStage(spinner, 'Monitoring complete');
     }
-    const monitorPromise = new Promise<void>(resolve => setTimeout(resolve, options.monitorMs));
-    await Promise.race([
-      monitorPromise,
-      new Promise<void>((_, reject) => {
-        abortController.signal.addEventListener('abort', () => {
-          reject(abortController.signal.reason);
-        });
-      })
-    ]);
-    succeedStage(spinner, 'Monitoring complete');
 
     // Wait for all in-flight captures to complete (with generous timeout)
     spinner = startStage('Finalizing captures...');
@@ -408,6 +532,14 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
         }
       }
     }
+
+    // Save session to custom path (--saveSession) after capture/watch, before browser close.
+    if (options.saveSession && context) {
+      await context.storageState({ path: options.saveSession });
+      if (!outputMode.json && !outputMode.quiet) {
+        console.log(chalk.green('✓') + ` Saved session to ${chalk.cyan(options.saveSession)}`);
+      }
+    }
     
     // Mark as closing and close browser before summary generation (cleanup can take 1-2 seconds)
     isClosing = true;
@@ -446,7 +578,9 @@ export async function monitor(options: MonitorOptions & { outputMode?: OutputMod
     return { captureDir };
   } finally {
     // Clear the hard timeout
-    clearTimeout(timeoutHandle);
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
     
     // Cleanup in case of early exit/error (should be no-op now)
     spinner?.stop();
@@ -470,7 +604,9 @@ async function handleResponse(
   includePattern: RegExp | null,
   excludePattern: RegExp | null,
   captureCount: number,
-  seenCaptures: Set<string>
+  seenCaptures: Set<string>,
+  // Optional callback for Phase 4 watch-mode live stats
+  onCapture?: (endpointKey: string, method: string, normalizedPath: string, payloadSize: number) => void,
 ): Promise<'captured' | 'duplicate' | 'skipped'> {
   // Check capture limit
   if (options.maxCaptures > 0 && captureCount >= options.maxCaptures) {
@@ -644,6 +780,10 @@ async function handleResponse(
   };
 
   await store.storeCapture(record, bodyBuffer);
+  // Notify live dashboard (watch mode) with endpoint identity and payload size
+  if (onCapture && endpointKey_) {
+    onCapture(endpointKey_, record.method, normalizedPath ?? endpointKey_, bodyBuffer?.length ?? record.payloadSize);
+  }
   return 'captured';
 }
 

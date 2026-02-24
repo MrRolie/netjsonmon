@@ -38,8 +38,20 @@ export interface NetJsonMonConfig {
   consentAction?: 'reject' | 'accept';
   consentHandlers?: string[];
   storageState?: string;
+  useSession?: string; // Alias for storageState
   saveStorageState?: boolean;
-  
+  // Phase 1 — Named Auth Sessions
+  saveSession?: string;
+  userDataDir?: string;
+  // Phase 2 — Stealth
+  stealth?: boolean;
+  // Phase 3 — Proxy
+  proxy?: string;
+  proxyList?: string;  // File path to a proxy list
+  proxyAuth?: string;
+  // Phase 4 — Watch mode
+  watch?: boolean;
+
   // Output
   disableSummary?: boolean;
   quiet?: boolean;
@@ -127,6 +139,22 @@ export function resolveConfigPaths(
   if (resolved.storageState && !path.isAbsolute(resolved.storageState)) {
     resolved.storageState = path.resolve(configDir, resolved.storageState);
   }
-  
+
+  if (resolved.useSession && !path.isAbsolute(resolved.useSession)) {
+    resolved.useSession = path.resolve(configDir, resolved.useSession);
+  }
+
+  if (resolved.saveSession && !path.isAbsolute(resolved.saveSession)) {
+    resolved.saveSession = path.resolve(configDir, resolved.saveSession);
+  }
+
+  if (resolved.userDataDir && !path.isAbsolute(resolved.userDataDir)) {
+    resolved.userDataDir = path.resolve(configDir, resolved.userDataDir);
+  }
+
+  if (resolved.proxyList && !path.isAbsolute(resolved.proxyList)) {
+    resolved.proxyList = path.resolve(configDir, resolved.proxyList);
+  }
+
   return resolved;
 }

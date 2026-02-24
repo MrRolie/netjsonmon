@@ -26,6 +26,17 @@ export interface MonitorOptions {
   consentHandlers?: string[];
   storageState?: string;
   saveStorageState: boolean;
+  // Phase 1 — Named Auth Sessions
+  saveSession?: string;   // Save storageState to a custom path after the run
+  userDataDir?: string;   // Use a persistent Chrome profile directory (survives across runs)
+  // Phase 2 — Stealth
+  stealth: boolean;
+  // Phase 3 — Proxy
+  proxy?: string;         // Single proxy URL (http/https/socks4/socks5)
+  proxyList?: string[];   // Pre-parsed list from --proxyList file
+  proxyAuth?: string;     // "username:password" credential override
+  // Phase 4 — Watch mode
+  watch: boolean;
   disableSummary: boolean;
 }
 
