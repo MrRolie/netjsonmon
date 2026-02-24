@@ -1,217 +1,82 @@
-# netjsonmon
+﻿# netjsonmon
 
-A CLI tool to monitor and capture JSON network responses during browser sessions using Playwright.
+[![ci](https://github.com/MrRolie/netjsonmon/actions/workflows/ci.yml/badge.svg)](https://github.com/MrRolie/netjsonmon/actions/workflows/ci.yml)
+[![license](https://img.shields.io/github/license/MrRolie/netjsonmon)](LICENSE)
+[![node](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
+`netjsonmon` is a CLI for discovering and ranking JSON API endpoints from real browser traffic.
+
+It is built for developers and data engineers who need to inspect network APIs, persist captures, and quickly find useful data endpoints.
 
 ![netjsonmon welcome banner](docs/assets/welcome-banner.png)
 
-## Quick Start
+## Install
 
-If you need help installing Node.js and npm, see `docs/SETUP.md`.
+Global install (recommended):
+
+```bash
+npm i -g netjsonmon
+```
+
+Local development install:
 
 ```bash
 npm install
 npm run build
 npm link
-
-netjsonmon
-netjsonmon run https://example.com
 ```
 
-Captures are saved under `./captures/<timestamp>-<runId>/`.
-
-## Basic Usage
+## Quick Start
 
 ```bash
-netjsonmon run https://jsonplaceholder.typicode.com/users
+# 1) Capture JSON traffic
+netjsonmon run https://example.com --outDir ./captures
+
+# 2) Inspect a capture
+netjsonmon inspect ./captures/<timestamp>-<runId>
+
+# 3) List top endpoints
+netjsonmon endpoints ./captures/<timestamp>-<runId> --limit 20
 ```
 
-Common options:
+## Core Commands
 
-```bash
-netjsonmon run https://jsonplaceholder.typicode.com/users --monitorMs 5000 --outDir ./captures
-```
+| Command | Purpose |
+| --- | --- |
+| `netjsonmon run <url>` | Capture JSON responses from a browser session |
+| `netjsonmon inspect <captureDir>` | Inspect summary and endpoint details for one capture |
+| `netjsonmon endpoints <captureDir>` | Filter/sort/export discovered endpoints |
+| `netjsonmon label [captureDir]` | Label endpoints and export training data |
+| `netjsonmon train [captureDir]` | Train the endpoint classifier model |
+| `netjsonmon mcp` | Start stdio MCP server for AI assistants |
+| `netjsonmon init` | Generate starter config and flow example |
 
-## What You Get
+## Most Used Run Flags
 
-- Deterministic capture window with JSON-only filtering.
-- Safe storage with redaction of common secrets and PII.
-- Endpoint summary and scoring to highlight likely data APIs.
-- Body-evidence-aware scoring: endpoints without JSON bodies are heavily down-weighted.
+- `--useSession <path>`: Load an existing authenticated session file.
+- `--saveSession <path>`: Save session state after capture for reuse.
+- `--storageState <path>`: Load Playwright storage state directly.
+- `--watch`: Interactive live dashboard mode until browser close/Ctrl+C.
+- `--stealth`: Enable anti-bot hardening using stealth tooling.
+- `--proxy <url>`: Route traffic through one proxy.
+- `--proxyList <file>`: Use a file of proxies (one per line).
+- `--proxyAuth <user:pass>`: Override proxy credentials.
+- `--flow <path>`: Run a custom flow script during capture.
 
-## Advanced Usage
+## Documentation
 
-### Commands
-
-- `netjsonmon` shows the welcome banner and examples.
-- `netjsonmon run <url>` captures JSON responses.
-- `netjsonmon init` creates a config file and sample flow.
-- `netjsonmon inspect <captureDir>` shows a summary for a previous run.
-- `netjsonmon endpoints <captureDir>` filters and exports endpoints.
-- `netjsonmon label <captureDir>` manually labels endpoints and exports training data.
-
-### Run Options
-
-- `<url>` - URL to monitor (required)
-- `--headless` - Run browser in headless mode (default: true)
-- `--monitorMs <ms>` - Capture window duration (default: 10000)
-- `--timeoutMs <ms>` - Hard timeout for entire operation, including capture finalization (default: 30000)
-- `--outDir <dir>` - Output directory (default: ./captures)
-- `--includeRegex <pattern>` - Only capture URLs matching this regex
-- `--excludeRegex <pattern>` - Exclude URLs matching this regex
-- `--maxBodyBytes <bytes>` - Maximum body size to capture (default: 1048576 = 1MB)
-- `--inlineBodyBytes <bytes>` - Inline bodies smaller than this (default: 16384 = 16KB)
-- `--maxCaptures <count>` - Maximum captures (default: 0 = unlimited)
-- `--maxConcurrentCaptures <count>` - Maximum concurrent capture operations (default: 6)
-- `--captureAllJson` - Capture JSON from all resource types (default: false)
-- `--flow <path>` - Path to custom flow module
-- `--saveHar` - Save HAR file for debugging (default: false)
-- `--trace` - Save Playwright trace for debugging (default: false)
-- `--userAgent <string>` - Custom user agent
-- `--consentMode <mode>` - Consent handling: auto, off, yahoo, generic (default: auto)
-- `--consentAction <action>` - Consent action preference: reject or accept (default: reject)
-- `--consentHandlers <list>` - Comma-separated handlers to enable (default: all)
-- `--storageState <path>` - Load browser storage state (cookies, localStorage) from file
-- `--saveStorageState` - Save browser storage state after flow (default: false)
-- `--disableSummary` - Disable automatic summary generation (default: false)
-- `--quiet` - Suppress non-essential output (default: false)
-- `--verbose` - Show verbose progress information (default: false)
-- `--debug` - Show debug information (default: false)
-- `--json` - Output results as JSON (default: false)
-- `--open` - Open capture directory after completion (default: false)
-
-### Handling Consent Pages
-
-Many sites show privacy/consent interstitials before the main content. netjsonmon provides several ways to handle these:
-
-```bash
-# Auto-handle Yahoo consent (clicks "Reject all")
-netjsonmon run https://ca.finance.yahoo.com/quote/AAPL --consentMode yahoo
-
-# Use generic consent handler for other sites
-netjsonmon run https://example.com --consentMode generic
-```
-
-Default action is `reject` for better repeatability. You can override with:
-
-```bash
-netjsonmon run https://example.com --consentMode generic --consentAction accept
-```
-
-### Custom Flows
-
-Create a custom flow to interact with the page:
-
-```typescript
-// flows/login.ts
-export default async (page) => {
-  await page.click('#login-button');
-  await page.fill('#username', 'test@example.com');
-  await page.fill('#password', 'password');
-  await page.click('#submit');
-  await page.waitForSelector('#dashboard');
-};
-```
-
-Run with:
-
-```bash
-netjsonmon run https://example.com --flow ./flows/login.ts
-```
-
-### Debug Artifacts
-
-Enable trace recording:
-
-```bash
-netjsonmon run https://example.com --trace
-```
-
-View the trace:
-
-```bash
-npx playwright show-trace ./captures/<runId>/trace.zip
-```
-
-Enable HAR recording:
-
-```bash
-netjsonmon run https://example.com --saveHar
-```
-
-### Output Structure
-
-```text
-captures/
-  <timestamp>-<runId>/
-    run.json           # Run metadata
-    index.jsonl        # One JSON record per capture
-    summary.json       # Endpoint aggregation and scoring
-    endpoints.jsonl    # All endpoints with metrics
-    labels/
-      labels.jsonl     # Manual labels per endpoint (created by label command)
-      training.jsonl   # Exported features + labels (optional)
-    bodies/
-      <hash>.json      # Externalized response bodies
-    session.har        # Optional HAR file (--saveHar)
-    trace.zip          # Optional Playwright trace (--trace)
-
-training-captures/
-  <timestamp>-<runId>/ # Same structure as captures/ (tracked for collaborative labeling)
-```
-
-### Scoring Notes (Body Evidence)
-
-Endpoint scoring now includes a body-evidence gate based on observed JSON bodies:
-
-- `bodyRate` = `jsonParseSuccessCount / count`
-- `bodyEvidenceFactor` is applied to the total score
-- Body metrics are included in both `summary.json` and `endpoints.jsonl`
-
-### Labeling Endpoints (Prompt 12)
-
-```bash
-# Interactive labeling (writes labels/labels.jsonl)
-netjsonmon label ./captures/<runId>
-
-# Export training data (features + label)
-netjsonmon label ./captures/<runId> --export
-
-# Auto-label endpoints without bodies as non-data
-netjsonmon label ./captures/<runId> --autoNonDataNoBody
-```
-
-### Shared Training Captures
-
-For collaborative labeling, place capture folders under `training-captures/` (tracked in git):
-
-```bash
-# Label a specific capture from the pool (you'll be prompted to pick)
-netjsonmon label ./training-captures
-
-# Export training data from selected captures in the pool
-netjsonmon label ./training-captures --export
-```
+- [Setup Guide](SETUP.md)
+- [MCP Integration](docs/MCP_INTEGRATION.md)
+- [ML Training Guide](docs/ML-TRAINING.md)
+- [Extensions Roadmap](docs/EXTENSIONS.md)
+- [GitHub Repo Setup Checklist](docs/GITHUB_REPO_SETUP.md)
 
 ## Development
 
 ```bash
 npm run build
 npm test
-npm link
-netjsonmon run <url>
 ```
-
-## Testing
-
-```bash
-npm test
-```
-
-## Project Status
-
-- **Main plan completed**: Prompts 1-11 in `docs/PLAN.md` are implemented, including CLI commands, capture pipeline, storage, scoring, and validation runs.
-- **Validation results**: See `docs/VALIDATION_RESULTS.md` for real-world test coverage and known issues.
-- **Extensions not yet implemented**: Prompts 13-14 (ML classifier, online prediction) are tracked in `docs/EXTENSIONS.md`.
 
 ## License
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support
+    url: https://github.com/MrRolie/netjsonmon/blob/main/SUPPORT.md
+    about: Questions about usage and troubleshooting.
+  - name: Security policy
+    url: https://github.com/MrRolie/netjsonmon/blob/main/SECURITY.md
+    about: Report security vulnerabilities privately when possible.
