@@ -14,8 +14,9 @@
  *   - server.run('stdio') → StdioServerTransport + server.connect()
  */
 
-import { readFile, access } from 'fs/promises';
-import { createReadStream } from 'fs';
+import { readFile, access, mkdir } from 'fs/promises';
+import { createReadStream, constants } from 'fs';
+import { homedir } from 'os';
 import { createInterface } from 'readline';
 import { join, resolve } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -26,6 +27,57 @@ import { monitor } from '../monitor.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+export function defaultMcpOutDir(): string {
+  // MCP servers are often started from host-controlled working directories
+  // (for example, C:\\Windows\\System32). Default to a user-writable path.
+  return resolve(homedir(), 'captures');
+}
+
+export function resolveMcpOutDir(outDir?: string): string {
+  return outDir ? resolve(outDir) : defaultMcpOutDir();
+}
+
+export async function ensureWritableOutDir(outDir: string): Promise<void> {
+  await mkdir(outDir, { recursive: true });
+  await access(outDir, constants.W_OK);
+}
+
+export function buildRunMonitorError(error: unknown, outDir: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const lower = message.toLowerCase();
+
+  const missingPlaywrightBrowser =
+    lower.includes('executable doesn\'t exist')
+    || lower.includes('browsertype.launch')
+    || lower.includes('playwright install');
+
+  if (missingPlaywrightBrowser) {
+    return [
+      'run_monitor failed: Playwright browser binaries appear to be missing.',
+      'Install once on the host machine and retry:',
+      '  npx playwright install chromium',
+      `Output directory for this run: ${outDir}`,
+      `Original error: ${message}`,
+    ].join('\n');
+  }
+
+  const permissionIssue =
+    lower.includes('eacces')
+    || lower.includes('eperm')
+    || lower.includes('permission denied')
+    || lower.includes('access is denied');
+
+  if (permissionIssue) {
+    return [
+      `Cannot write capture artifacts to "${outDir}".`,
+      'Pass a user-writable outDir to run_monitor (for example, "C:/Users/<you>/captures").',
+      `Original error: ${message}`,
+    ].join('\n');
+  }
+
+  return `run_monitor failed: ${message}`;
+}
 
 /** Read and parse summary.json from a capture directory */
 async function readSummary(captureDir: string): Promise<any> {
@@ -101,33 +153,40 @@ async function toolRunMonitor(args: {
   storageState?: string;
   outDir?: string;
 }): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-  const outDir = resolve(args.outDir ?? './captures');
+  const outDir = resolveMcpOutDir(args.outDir);
 
-  const result = await monitor({
-    url: args.url,
-    headless: true,
-    monitorMs: args.monitorMs ?? 10_000,
-    timeoutMs: Math.max((args.monitorMs ?? 10_000) + 30_000, 60_000),
-    outDir,
-    maxBodyBytes: 1_048_576,
-    inlineBodyBytes: 16_384,
-    maxCaptures: 0,
-    maxConcurrentCaptures: 6,
-    captureAllJson: false,
-    flow: args.flow,
-    saveHar: false,
-    trace: false,
-    stealth: args.stealth ?? false,
-    proxy: args.proxy,
-    watch: false,
-    consentMode: 'auto',
-    consentAction: 'reject',
-    saveStorageState: false,
-    storageState: args.storageState,
-    disableSummary: false,
-    // Fully suppress all stdout so we don't corrupt the JSON-RPC stream
-    outputMode: { json: true, quiet: true, verbose: false, debug: false },
-  } as any);
+  let result: { captureDir: string } | void;
+  try {
+    await ensureWritableOutDir(outDir);
+
+    result = await monitor({
+      url: args.url,
+      headless: true,
+      monitorMs: args.monitorMs ?? 10_000,
+      timeoutMs: Math.max((args.monitorMs ?? 10_000) + 30_000, 60_000),
+      outDir,
+      maxBodyBytes: 1_048_576,
+      inlineBodyBytes: 16_384,
+      maxCaptures: 0,
+      maxConcurrentCaptures: 6,
+      captureAllJson: false,
+      flow: args.flow,
+      saveHar: false,
+      trace: false,
+      stealth: args.stealth ?? false,
+      proxy: args.proxy,
+      watch: false,
+      consentMode: 'auto',
+      consentAction: 'reject',
+      saveStorageState: false,
+      storageState: args.storageState,
+      disableSummary: false,
+      // Fully suppress all stdout so we don't corrupt the JSON-RPC stream
+      outputMode: { json: true, quiet: true, verbose: false, debug: false },
+    } as any);
+  } catch (error) {
+    throw new Error(buildRunMonitorError(error, outDir));
+  }
 
   if (!result?.captureDir) {
     throw new Error('Monitor completed but returned no captureDir');
@@ -276,7 +335,7 @@ export async function mcpCommand(): Promise<void> {
         storageState: z.string().optional()
           .describe('Path to a saved session file (from a previous --saveSession run)'),
         outDir: z.string().optional()
-          .describe('Directory to store captures (default: ./captures)'),
+          .describe('Directory to store captures (default: <user-home>/captures)'),
       },
     },
     async (args) => toolRunMonitor(args),
