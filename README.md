@@ -68,8 +68,6 @@ netjsonmon endpoints ./captures/<timestamp>-<runId> --limit 20
 - [Setup Guide](SETUP.md)
 - [MCP Integration](docs/MCP_INTEGRATION.md)
 - [ML Training Guide](docs/ML-TRAINING.md)
-- [Extensions Roadmap](docs/EXTENSIONS.md)
-- [GitHub Repo Setup Checklist](docs/GITHUB_REPO_SETUP.md)
 
 ## Development
 
