@@ -14,6 +14,7 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+*.tgz
 
 # Environment / secrets
 .env
@@ -85,3 +86,8 @@ Thumbs.db
 docs/archive/
 .claude/
 training-captures/
+
+# =========================
+# Release / publish local artifacts
+# =========================
+.release-notes.local.md

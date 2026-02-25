@@ -68,6 +68,7 @@ netjsonmon endpoints ./captures/<timestamp>-<runId> --limit 20
 - [Setup Guide](SETUP.md)
 - [MCP Integration](docs/MCP_INTEGRATION.md)
 - [ML Training Guide](docs/ML-TRAINING.md)
+- [Publishing and Releases](docs/PUBLISHING.md)
 
 ## Development
 
